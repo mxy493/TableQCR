@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/act_config.svg</file>
+        <file>images/act_crop.svg</file>
+        <file>images/act_about.svg</file>
+        <file>images/act_export.svg</file>
+        <file>images/act_ocr.svg</file>
+        <file>images/act_open.svg</file>
+        <file>images/logo.png</file>
+    </qresource>
+</RCC>
