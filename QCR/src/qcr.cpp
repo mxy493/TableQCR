@@ -400,6 +400,8 @@ void getVertexes(std::vector<cv::Vec4i> &lines, std::vector<cv::Point> &points)
     if (h_lines.size() <= 2 || v_lines.size() <= 2)
         return;
 
+    // ---------- 如果可以，此处应该剔除斜率偏差较大的异常值 ---------- //
+
     // ---------- 合并横向线段 ---------- //
     // 按端点y坐标从小到大排序
     std::sort(h_lines.begin(), h_lines.end(),
@@ -409,12 +411,11 @@ void getVertexes(std::vector<cv::Vec4i> &lines, std::vector<cv::Point> &points)
     cv::Vec4i hu_line = h_lines.front();
     cv::Vec4i hb_line = h_lines.back();
 
-    double d1 = getDistance(hu_line, cv::Point(hb_line[0], hb_line[1]));
-    double d2 = getDistance(hu_line, cv::Point(hb_line[2], hb_line[3]));
+    double d1;
+    double d2;
     // 判断是否同一条直线的距离阈值
-    double threshold = std::min(d1, d2) / 4;
-    printLog(QString::fromUtf8(u8"Horizontal distance threshold: ")
-        + QString::number(threshold));
+    double threshold = 10.0;
+    printLog(QString::fromUtf8(u8"Distance threshold: ") + QString::number(threshold));
     
     for (size_t i = 1; i < h_lines.size() -1; ++i)
     {
@@ -457,12 +458,6 @@ void getVertexes(std::vector<cv::Vec4i> &lines, std::vector<cv::Point> &points)
         });
     cv::Vec4i vl_line = v_lines.front();
     cv::Vec4i vr_line = v_lines.back();
-
-    d1 = getDistance(vl_line, cv::Point(vr_line[0], vr_line[1]));
-    d2 = getDistance(vl_line, cv::Point(vr_line[2], vr_line[3]));
-    threshold = std::min(d1, d2) / 4;
-    printLog(QString::fromUtf8(u8"Vertical distance threshold: ")
-        + QString::number(threshold));
 
     for (size_t i = 1; i < v_lines.size() - 1; ++i)
     {
@@ -630,6 +625,7 @@ void QCR::edgeDetection()
     }
 
     ui.ui_img_widget->setInterceptBox(points_rel);
+    return;
 }
 
 void QCR::processImage()
