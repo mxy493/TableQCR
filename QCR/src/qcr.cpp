@@ -578,15 +578,13 @@ void QCR::edgeDetection()
     findContours(canny, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
     double area = 0;
     int index = 0;
-    std::vector<std::vector<cv::Point>> contours_poly = contours;
     for (int i=0; i < contours.size(); ++i)
     {
         double a = cv::contourArea(contours[i]);
-        double epsilon = 0.02 * cv::arcLength(contours[i], false);
-        approxPolyDP(contours[i], contours_poly[i], epsilon, false);
         if (a > area)
         {
-            printLog(tr(u8"精度: ") + QString::number(epsilon));
+            // 折线化
+            approxPolyDP(contours[i], contours[i], 10, false);
             area = a;
             index = i;
         }

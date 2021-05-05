@@ -12,6 +12,7 @@
 
 /QCR/data/*
 /QCR/output
+/QCR/tmp
 /QCR/*.jpg
 /QCR/*.png
 /QCR/*.tiff
