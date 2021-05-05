@@ -48,9 +48,7 @@ QCR::QCR(QWidget *parent)
 
     // 测试按钮
     test1_action = new QAction(QIcon(":/images/logo.png"), tr(u8"测试"));
-
     ui.toolbar->addAction(test1_action);
-
     connect(test1_action, &QAction::triggered, this, &QCR::recognize);
 
     // 设置表格样式
@@ -136,7 +134,7 @@ void QCR::openImage()
             });
         compress_thread->start();
 
-        //edgeDetection();
+        edgeDetection();
     }
 }
 
@@ -562,6 +560,9 @@ void QCR::resizeImage(const QString &path)
 
 void QCR::edgeDetection()
 {
+    if (compress_thread->isRunning())
+        compress_thread->wait();
+
     QString path = img_trans_path.isEmpty() ? img_path : img_trans_path;
     cv::Mat img = cv::imread(path.toLocal8Bit().data());
 
@@ -570,10 +571,8 @@ void QCR::edgeDetection()
     if (img.channels() == 3)
         cvtColor(img, gray, CV_BGR2GRAY);
 
-    // 双边滤波 > 均值滤波 > 高斯滤波
+    // 双边滤波
     cv::Mat blured;
-    //cv::blur(proc, proc, cv::Size(3, 3));
-    //GaussianBlur(proc, proc, cv::Size(3, 3), 0);
     cv::bilateralFilter(gray, blured, 7, 75, 75);
 
     cv::Mat canny;
@@ -598,8 +597,8 @@ void QCR::edgeDetection()
         }
     }
 
-    cv::Mat black;
-    black.create(gray.size(), gray.type());
+    // 创建纯黑灰度图
+    cv::Mat black = cv::Mat::zeros(gray.size(), CV_8U);
     cv::drawContours(black, contours, index, cv::Scalar(255, 255, 255), 1);
 
     std::vector<cv::Vec4i> lines;
