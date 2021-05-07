@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <QThread>
 
@@ -23,12 +23,16 @@ class QCR : public QMainWindow
 public:
     QCR(QWidget *parent = Q_NULLPTR);
     void getBdAccessToken();
-    void resizeImage(const QString &path);
+    void resizeImage(const QString &path, int len = IMG_LENGTH, int sz = IMG_SIZE);
+    // 边缘检测主要是拿到4个顶点的相对坐标, 可以将图片缩小以加快处理速度
     void edgeDetection();
     void processImage();
     void updateTableCell(int row, int col, int row_span, int col_span, const QString &text);
     void txParseData(const std::string &str);
     void bdParseData(const std::string &str);
+    // 计算平均值和标准差
+    void calAveSd(const std::vector<double> &vec, double &ave, double &sd);
+    void getVertexes(std::vector<cv::Vec4i> &lines, std::vector<cv::Point> &points);
     void closeEvent(QCloseEvent *event);
 
 public slots:

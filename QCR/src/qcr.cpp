@@ -1,4 +1,4 @@
-﻿#include <QFileDialog>
+#include <QFileDialog>
 #include <QTextStream>
 #include <QDateTime>
 #include <QIODevice>
@@ -360,7 +360,7 @@ cv::Point getIntersection(const cv::Vec4i &l1, const cv::Vec4i &l2)
     return cv::Point(x, y);
 }
 
-void getVertexes(std::vector<cv::Vec4i> &lines, std::vector<cv::Point> &points)
+void QCR::getVertexes(std::vector<cv::Vec4i> &lines, std::vector<cv::Point> &points)
 {
     // ---------- 按斜率分类横向线段和竖向线段 ---------- //
     std::vector<cv::Vec4i> h_lines;
@@ -397,10 +397,8 @@ void getVertexes(std::vector<cv::Vec4i> &lines, std::vector<cv::Point> &points)
             v_lines.push_back(line);
         }
     }
-    if (h_lines.size() <= 2 || v_lines.size() <= 2)
+    if (h_lines.size() < 2 || v_lines.size() < 2)
         return;
-
-    // ---------- 如果可以，此处应该剔除斜率偏差较大的异常值 ---------- //
 
     // ---------- 合并横向线段 ---------- //
     // 按端点y坐标从小到大排序
@@ -495,48 +493,50 @@ void getVertexes(std::vector<cv::Vec4i> &lines, std::vector<cv::Point> &points)
     lines = { vl_line, hu_line, vr_line, hb_line };
 
     // ---------- 计算直线的交点 ---------- //
+    // 多次转换导致还原后的值相对实际值要小一点
+    // 所以通过减的少一些, 加的多一些来补偿
     cv::Point ul = getIntersection(vl_line, hu_line); // up_left
-    ul.x -= 5;
-    ul.y -= 5;
+    ul.x -= 2;
+    ul.y -= 2;
     cv::Point ur = getIntersection(vr_line, hu_line); // up_right 
-    ur.x += 5;
-    ur.y -= 5;
+    ur.x += 4;
+    ur.y -= 2;
     cv::Point br = getIntersection(vr_line, hb_line); // bottom_right
-    br.x += 5;
-    br.y += 5;
+    br.x += 4;
+    br.y += 4;
     cv::Point bl = getIntersection(vl_line, hb_line); // bottom_left
-    bl.x -= 5;
-    bl.y += 5;
+    bl.x -= 2;
+    bl.y += 4;
 
     points = { ul, ur, br, bl };
 }
 
-void QCR::resizeImage(const QString &path)
+void QCR::resizeImage(const QString &path, int len, int sz)
 {
     cv::Mat img = cv::imread(path.toLocal8Bit().data());
     double scale = 1.0;
-    // 缩小宽高超过 IMG_LENGTH 像素的图片以加快处理速度
-    if (img.rows > IMG_LENGTH || img.cols > IMG_LENGTH)
+    // 缩小宽高超过 len 像素的图片以加快处理速度
+    if (img.rows > len || img.cols > len)
     {
         double r = static_cast<double>(img.rows);
         double c = static_cast<double>(img.cols);
-        scale = IMG_LENGTH / r < IMG_LENGTH / c ?
-            IMG_LENGTH / r : IMG_LENGTH / c;
+        scale = len / r < len / c ?
+            len / r : len / c;
     }
     QFileInfo info(path);
-    if (info.size() > IMG_SIZE)
+    if (info.size() > sz)
     {
-        double _s = std::sqrt(static_cast<double>(IMG_SIZE) / info.size());
+        double _s = std::sqrt(static_cast<double>(sz) / info.size());
         if (_s < scale)
             scale = _s;
     }
 
     double _sz = info.size() / 1024.0 / 1024.0;
-    QString sz = QString::number(_sz, 'f', 2);
+    QString s_sz = QString::number(_sz, 'f', 2);
     if (scale < 1.0)
     {
         printLog(tr(u8"图片过大(%1 MB, %2x%3), 按比例 %4 压缩")
-            .arg(sz).arg(img.cols).arg(img.rows).arg(scale));
+            .arg(s_sz).arg(img.cols).arg(img.rows).arg(scale));
 
         cv::resize(img, img, cv::Size(), scale, scale, cv::INTER_AREA);
         cv::imwrite(path.toLocal8Bit().data(), img);
@@ -544,8 +544,8 @@ void QCR::resizeImage(const QString &path)
         // 重新获取文件信息
         info.refresh();
         _sz = info.size() / 1024.0 / 1024.0;
-        sz = QString::number(_sz, 'f', 2);
-        printLog(tr(u8"图片已压缩至: %1 MB, %2x%3").arg(sz).arg(img.cols).arg(img.rows));
+        s_sz = QString::number(_sz, 'f', 2);
+        printLog(tr(u8"图片已压缩至: %1 MB, %2x%3").arg(s_sz).arg(img.cols).arg(img.rows));
     }
     else
     {
@@ -561,6 +561,17 @@ void QCR::edgeDetection()
     QString path = img_trans_path.isEmpty() ? img_path : img_trans_path;
     cv::Mat img = cv::imread(path.toLocal8Bit().data());
 
+    // 缩小图片到宽高不超过 len 像素以加快处理速度
+    int len = 1000;
+    if (img.rows > len || img.cols > len)
+    {
+        double r = static_cast<double>(img.rows);
+        double c = static_cast<double>(img.cols);
+        double scale = len / r < len / c ? len / r : len / c;
+        cv::resize(img, img, cv::Size(), scale, scale, cv::INTER_AREA);
+    }
+
+
     // 检查是否为灰度图，如果不是，转化为灰度图
     cv::Mat gray = img.clone();
     if (img.channels() == 3)
@@ -568,10 +579,14 @@ void QCR::edgeDetection()
 
     // 双边滤波
     cv::Mat blured;
-    cv::bilateralFilter(gray, blured, 7, 75, 75);
+    cv::bilateralFilter(gray, blured, 5, 70, 70);
 
+    // 边缘检测
     cv::Mat canny;
-    Canny(blured, canny, 40, 100, 3);
+    Canny(blured, canny, 30, 60);
+    // 如果表格外围没有更多文字或其他干扰因素, 加上以下两行应该可以获得更好的轮廓
+    //cv::dilate(canny, canny, cv::Mat());
+    //Canny(canny, canny, 50, 150);
 
     std::vector<std::vector<cv::Point>> contours;
     // 只检测外围轮廓, 内轮廓被忽略
@@ -584,7 +599,7 @@ void QCR::edgeDetection()
         if (a > area)
         {
             // 折线化
-            approxPolyDP(contours[i], contours[i], 10, false);
+            approxPolyDP(contours[i], contours[i], 10, true);
             area = a;
             index = i;
         }
@@ -596,7 +611,7 @@ void QCR::edgeDetection()
 
     std::vector<cv::Vec4i> lines;
     cv::HoughLinesP(black, lines, 1, CV_PI / 180, 50, 100, 50);
-    printLog(tr(u8"Lines: ") + QString::number(lines.size()));
+    printLog(tr(u8"Detected lines: ") + QString::number(lines.size()));
 
     // 四个顶点: 左上、右上、右下、左下
     std::vector<cv::Point> points;
@@ -623,7 +638,6 @@ void QCR::edgeDetection()
     }
 
     ui.ui_img_widget->setInterceptBox(points_rel);
-    return;
 }
 
 void QCR::processImage()
@@ -794,6 +808,16 @@ void QCR::bdParseData(const std::string &str)
 
         updateTableCell(row, col, row_span, col_span, text);
     }
+}
+
+void QCR::calAveSd(const std::vector<double> &vec, double &ave, double &sd)
+{
+    if (vec.empty())
+        return;
+    int n = vec.size();
+    ave = std::accumulate(vec.begin(), vec.end(), 0.0) / n;
+    sd = std::sqrt(std::accumulate(vec.begin(), vec.end(), 0.0,
+        [=](double sum, double d) {return sum += std::pow(d - ave, 2); }) / n);
 }
 
 void QCR::interceptImage()
