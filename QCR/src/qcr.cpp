@@ -1,4 +1,4 @@
-#include <QFileDialog>
+﻿#include <QFileDialog>
 #include <QTextStream>
 #include <QDateTime>
 #include <QIODevice>
@@ -112,6 +112,7 @@ void QCR::openImage()
     printLog(tr("Original: ") + path);
     if (!path.isEmpty())
     {
+        resetTable();
         ui.ui_img_widget->setPix(QPixmap(path));
         QApplication::processEvents();
 
@@ -753,6 +754,12 @@ void QCR::updateTableCell(int row, int col, int row_span, int col_span, const QS
         ui.ui_table_widget->setSpan(row, col, row_span, col_span);
 }
 
+void QCR::resetTable()
+{
+    ui.ui_table_widget->clearContents();
+    ui.ui_table_widget->clearSpans();
+}
+
 void QCR::txParseData(const std::string &str)
 {
     json result_data = json::parse(str);
@@ -768,7 +775,7 @@ void QCR::txParseData(const std::string &str)
         if (tmp.size() > cells.size())
             cells = tmp;
     }
-    ui.ui_table_widget->clearContents();
+    resetTable();
     for (const auto &cell : cells)
     {
         // 最小值作为该格子的左上角单元格坐标
@@ -791,7 +798,7 @@ void QCR::bdParseData(const std::string &str)
     if (result_data.at("form_num") == 0)
         return;
     auto table = result_data.at("forms").at(0).at("body");
-    ui.ui_table_widget->clearContents();
+    resetTable();
     for (const auto &cell : table)
     {
         // 占据的行列数列表
