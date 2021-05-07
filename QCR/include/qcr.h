@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <QThread>
 
@@ -28,6 +28,7 @@ public:
     void edgeDetection();
     void processImage();
     void updateTableCell(int row, int col, int row_span, int col_span, const QString &text);
+    void resetTable();
     void txParseData(const std::string &str);
     void bdParseData(const std::string &str);
     // 计算平均值和标准差
