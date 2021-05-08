@@ -57,9 +57,9 @@ void ConfigDialog::loadConfig()
                     ui.combo_service_provider->setCurrentIndex(index);
                 }
                 else if (key == QString::fromUtf8(u8"img_length"))
-                    ui.line_img_length->setText(value);
+                    ui.spin_img_length->setValue(value.toInt());
                 else if (key == QString::fromUtf8(u8"img_size"))
-                    ui.line_img_size->setText(value);
+                    ui.spin_img_size->setValue(value.toInt());
 
                 else if (key == QString::fromUtf8(u8"tx_url"))
                     ui.line_tx_url->setText(value);
@@ -88,8 +88,8 @@ void ConfigDialog::loadConfig()
 void ConfigDialog::updateConfig()
 {
     QString service_provider = ui.combo_service_provider->currentText();
-    QString img_length = ui.line_img_length->text();
-    QString img_size = ui.line_img_size->text();
+    QString img_length = QString::number(ui.spin_img_length->value());
+    QString img_size = QString::number(ui.spin_img_size->value());
 
     QString bd_get_token_url = ui.line_bd_get_token_url->text();
     QString bd_request_url = ui.line_bd_request_url->text();
