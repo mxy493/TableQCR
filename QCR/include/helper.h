@@ -23,6 +23,8 @@ void printLog(const QString &log);
 
 void printLog(const std::string &log);
 
+void printLog(const char *log);
+
 /*
 * @brief 将int64_t类型的unix时间戳转换为字符串
 */

@@ -32,7 +32,7 @@ public slots:
     void stop();
 
 private:
-    QString text = tr(u8"正在识别");
+    QString text = QString::fromUtf8(u8"正在识别");
     int angle = 0;
     const int delta = 36;
     const int w = 120;  // 窗口宽度

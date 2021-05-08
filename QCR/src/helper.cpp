@@ -31,6 +31,11 @@ void printLog(const std::string &log)
     printLog(QString::fromUtf8(log.c_str()));
 }
 
+void printLog(const char *log)
+{
+    printLog(QString(log));
+}
+
 std::string get_data(const int64_t &timestamp)
 {
     std::string utcDate;
@@ -61,8 +66,7 @@ void image2base64(const std::string &img_file, std::string &base64)
         dir.mkdir("tmp");
     }
     // 打开保存文件对话框
-    QString file_path = QString::fromUtf8(u8"./tmp/")
-        + info.baseName() + QString::fromUtf8(u8".txt");
+    QString file_path = QString::fromUtf8(u8"./tmp/%1.txt").arg(info.baseName());
     QFile file(file_path);
     if (file.open(QIODevice::WriteOnly))
     {
@@ -100,7 +104,7 @@ std::vector<std::vector<cv::Point>> recognizeTable(const cv::String path)
     cv::Mat mat = cv::imread(path);
     if (mat.empty())
     {
-        printLog(QObject::tr("Error opening image."));
+        printLog("Error opening image.");
         return std::vector<std::vector<cv::Point>>();
     }
 
@@ -141,7 +145,7 @@ std::vector<std::vector<cv::Point>> recognizeTable(const cv::String path)
     // 距离精度1像素、角度精度1°、最少交点数200、最小长度200、最长断连50像素
     HoughLinesP(canny_h, h_lines, 1, CV_PI / 180, 50, 100, 50);
     std::vector<cv::Vec3d> lines_h = mergeLines(h_lines, true);
-    printLog(QObject::tr("rows = ") + QString::number(lines_h.size()));
+    printLog("rows = " + std::to_string(lines_h.size()));
 
     cv::Mat struct_v = cv::getStructuringElement(
         cv::MORPH_RECT, cv::Size(1, 30));
@@ -157,7 +161,7 @@ std::vector<std::vector<cv::Point>> recognizeTable(const cv::String path)
     // 距离精度1像素、角度精度1°、最少交点数200、最小长度200、最长断连50像素
     HoughLinesP(canny_v, v_lines, 1, CV_PI / 180, 50, 100, 50);
     std::vector<cv::Vec3d> lines_v = mergeLines(v_lines, false);
-    printLog(QObject::tr("cols = ") + QString::number(lines_v.size()));
+    printLog("cols = " + std::to_string(lines_v.size()));
 
     /*
     // Draw the lines
@@ -206,7 +210,7 @@ std::vector<std::vector<cv::Point>> recognizeTable(const cv::String path)
         int y = sum_y / contour.size();
         points_list.push_back(cv::Point(x, y));
     }
-    printLog(QObject::tr("Point count = ") + QString::number(points_list.size()));
+    printLog("Point count = " + std::to_string(points_list.size()));
 
     /* points_matrix:
     * p1 p4 p7
@@ -282,7 +286,7 @@ std::vector<std::vector<cv::Point>> formatPointMatrix(
 
     if (points_list.size() < 4 || rows < 2 || cols < 2)
     {
-        printLog(QObject::tr("Unable to form a table."));
+        printLog("Unable to form a table.");
         return matrix;
     }
 

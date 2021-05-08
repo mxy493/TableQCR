@@ -25,12 +25,12 @@ QCR::QCR(QWidget *parent)
     ui.central_widget->setLayout(ui.hbox);
     setCentralWidget(ui.central_widget);
 
-    open_action = new QAction(QIcon(":/images/act_open.svg"), tr(u8"打开"));
-    crop_action = new QAction(QIcon(":/images/act_crop.svg"), tr(u8"矫正"));
-    ocr_action = new QAction(QIcon(":/images/act_ocr.svg"), tr(u8"识别"));
-    export_action = new QAction(QIcon(":/images/act_export.svg"), tr(u8"导出"));
-    config_action = new QAction(QIcon(":/images/act_config.svg"), tr(u8"设置"));
-    about_action = new QAction(QIcon(":/images/act_about.svg"), tr(u8"关于"));
+    open_action = new QAction(QIcon(":/images/act_open.svg"), QString::fromUtf8(u8"打开"));
+    crop_action = new QAction(QIcon(":/images/act_crop.svg"), QString::fromUtf8(u8"矫正"));
+    ocr_action = new QAction(QIcon(":/images/act_ocr.svg"), QString::fromUtf8(u8"识别"));
+    export_action = new QAction(QIcon(":/images/act_export.svg"), QString::fromUtf8(u8"导出"));
+    config_action = new QAction(QIcon(":/images/act_config.svg"), QString::fromUtf8(u8"设置"));
+    about_action = new QAction(QIcon(":/images/act_about.svg"), QString::fromUtf8(u8"关于"));
 
     ui.toolbar->addAction(open_action);
     ui.toolbar->addAction(crop_action);
@@ -47,7 +47,7 @@ QCR::QCR(QWidget *parent)
     connect(about_action, SIGNAL(triggered()), &about_dlg, SLOT(show()));
 
     // 测试按钮
-    test1_action = new QAction(QIcon(":/images/logo.png"), tr(u8"测试"));
+    test1_action = new QAction(QIcon(":/images/logo.png"), QString::fromUtf8(u8"测试"));
     ui.toolbar->addAction(test1_action);
     connect(test1_action, &QAction::triggered, this, &QCR::recognize);
 
@@ -69,12 +69,11 @@ QCR::QCR(QWidget *parent)
 void QCR::getBdAccessToken()
 {
     QDateTime now = QDateTime::currentDateTime();
-    QString token_path = tr(u8"./data/token_")
-        + now.toString(QString("yyyyMMdd")) + tr(u8".txt");
+    QString token_path = QString::fromUtf8(u8"./data/token_%1.txt").arg(now.toString(QString("yyyyMMdd")));
     QFile file(token_path);
     if (file.exists() && file.open(QIODevice::ReadOnly))
     {
-        printLog(tr(u8"Access Token 文件存在: ") + token_path);
+        printLog(QString::fromUtf8(u8"Access Token 文件存在: ") + token_path);
         QTextStream in(&file);
         QString token = in.readAll();
         bd_access_token = token.toLocal8Bit().data();
@@ -101,15 +100,16 @@ void QCR::getBdAccessToken()
             out.flush();
             file.close();
         }
-        printLog(tr(u8"已获取到 Access Token 并写入到: ") + token_path);
+        printLog(QString::fromUtf8(u8"已获取到 Access Token 并写入到: ") + token_path);
     }
 }
 
 void QCR::openImage()
 {
     QString path = QFileDialog::getOpenFileName(this,
-        tr(u8"打开图片"), tr(u8"."), tr(u8"图片 (*.png *.bmp *.jpg *.tiff);;所有文件 (*.*)"));
-    printLog(tr("Original: ") + path);
+        QString::fromUtf8(u8"打开图片"), QString::fromUtf8(u8"."),
+        QString::fromUtf8(u8"图片 (*.png *.bmp *.jpg *.tiff);;所有文件 (*.*)"));
+    printLog(QString::fromUtf8(u8"Original: ") + path);
     if (!path.isEmpty())
     {
         resetTable();
@@ -127,10 +127,10 @@ void QCR::openImage()
 
                 // 复制并压缩图片
                 QFile file(path);
-                img_path = tr(u8"./tmp/QCR_") + getCurTimeString() + tr(u8".jpg");
+                img_path = QString::fromUtf8(u8"./tmp/QCR_%1.jpg").arg(getCurTimeString());
                 img_trans_path.clear();
                 file.copy(img_path);
-                printLog(tr(u8"已创建副本: ") + img_path);
+                printLog(QString::fromUtf8(u8"已创建副本: ") + img_path);
                 resizeImage(img_path);
             });
         compress_thread->start();
@@ -144,11 +144,11 @@ void QCR::runOcr()
     QString path = img_trans_path.isEmpty() ? img_path : img_trans_path;
     if (path.isEmpty())
     {
-        MyMessageBox msg(tr(u8"请先打开一张图片!\n"));
+        MyMessageBox msg(QString::fromUtf8(u8"请先打开一张图片!"));
         msg.exec();
         return;
     }
-    printLog(tr(u8"开始识别图片: ") + path);
+    printLog(QString::fromUtf8(u8"开始识别图片: ") + path);
 
     QThread *ocr_thread = QThread::create(
         [&]() {
@@ -162,14 +162,14 @@ void QCR::runOcr()
             image2base64(path.toLocal8Bit().data(), base64_img);
 
             QString service_provider = config_dialog.ui.combo_service_provider->currentText();
-            if (service_provider.contains(tr(u8"腾讯")))
+            if (service_provider.contains(QString::fromUtf8(u8"腾讯")))
             { 
-                printLog(tr(u8"使用腾讯API识别表格"));
+                printLog(QString::fromUtf8(u8"使用腾讯API识别表格"));
                 runTxOcr(base64_img);
             }
-            else if(service_provider.contains(tr(u8"百度")))
+            else if(service_provider.contains(QString::fromUtf8(u8"百度")))
             {
-                printLog(tr(u8"使用百度API识别表格"));
+                printLog(QString::fromUtf8(u8"使用百度API识别表格"));
                 runBdOcr(base64_img);
             }
         });
@@ -234,9 +234,11 @@ void QCR::exportTableData()
         dir.mkdir("output");
     }
     // 打开保存文件对话框
-    QString file_name = tr("QCR_") + getCurTimeString() + tr(".csv");
+    QString file_name = QString::fromUtf8("QCR_%1.csv").arg(getCurTimeString());
     QString file_path = QFileDialog::getSaveFileName(
-        this, tr(u8"导出数据"), tr("./output/") + file_name, tr(u8"表格 (*.csv)"));
+        this, QString::fromUtf8(u8"导出数据"),
+        QString::fromUtf8(u8"./output/") + file_name,
+        QString::fromUtf8(u8"表格 (*.csv)"));
     if (!file_path.isEmpty())
     {
         QFile file(file_path);
@@ -252,16 +254,16 @@ void QCR::exportTableData()
                 for (int j = 0; j < col; j++)
                 {
                     QTableWidgetItem *item = ui.ui_table_widget->item(i, j);
-                    QString t = item != nullptr ? item->text() : tr("");
-                    line += t + tr(",");
+                    QString t = item != nullptr ? item->text() : QString("");
+                    line += t + QString(",");
                 }
                 // 将末尾多余的一个','替换为'\n'并写入文件
-                out << line.replace(line.length() - 1, 1, tr("\n"));
+                out << line.replace(line.length() - 1, 1, QString("\n"));
                 out.flush();
             }
             file.close();  // 关闭文件，否则数据无法保存
-            MyMessageBox msg(QMessageBox::Information, tr(u8"保存成功"),
-                tr(u8"数据已导出到文件 ") + file_path);
+            MyMessageBox msg(QMessageBox::Information, QString::fromUtf8(u8"保存成功"),
+                QString::fromUtf8(u8"数据已导出到文件 ") + file_path);
             msg.exec();
         }
     }
@@ -304,7 +306,7 @@ void QCR::recognize()
 
     double t = double(duration.count()) * std::chrono::microseconds::period::num
         / std::chrono::microseconds::period::den;
-    printLog(tr(u8"耗时 ") + QString::number(t, 'f', 3) + tr(u8" 秒"));
+    printLog(QString::fromUtf8(u8"耗时 %1 秒").arg(QString::number(t, 'f', 3));
 
     // Fill in the data in the table
     ui.ui_table_widget->clearContents();
@@ -414,7 +416,7 @@ void QCR::getVertexes(std::vector<cv::Vec4i> &lines, std::vector<cv::Point> &poi
     double d2;
     // 判断是否同一条直线的距离阈值
     double threshold = 10.0;
-    printLog(QString::fromUtf8(u8"Distance threshold: ") + QString::number(threshold));
+    printLog(QString::fromUtf8(u8"Distance threshold: %1").arg(threshold));
     
     for (size_t i = 1; i < h_lines.size() -1; ++i)
     {
@@ -536,7 +538,7 @@ void QCR::resizeImage(const QString &path, int len, int sz)
     QString s_sz = QString::number(_sz, 'f', 2);
     if (scale < 1.0)
     {
-        printLog(tr(u8"图片过大(%1 MB, %2x%3), 按比例 %4 压缩")
+        printLog(QString::fromUtf8(u8"图片过大(%1 MB, %2x%3), 按比例 %4 压缩")
             .arg(s_sz).arg(img.cols).arg(img.rows).arg(scale));
 
         cv::resize(img, img, cv::Size(), scale, scale, cv::INTER_AREA);
@@ -546,11 +548,11 @@ void QCR::resizeImage(const QString &path, int len, int sz)
         info.refresh();
         _sz = info.size() / 1024.0 / 1024.0;
         s_sz = QString::number(_sz, 'f', 2);
-        printLog(tr(u8"图片已压缩至: %1 MB, %2x%3").arg(s_sz).arg(img.cols).arg(img.rows));
+        printLog(QString::fromUtf8(u8"图片已压缩至: %1 MB, %2x%3").arg(s_sz).arg(img.cols).arg(img.rows));
     }
     else
     {
-        printLog(tr(u8"图片无需压缩: %1 MB, %2x%3").arg(sz).arg(img.cols).arg(img.rows));
+        printLog(QString::fromUtf8(u8"图片无需压缩: %1 MB, %2x%3").arg(s_sz).arg(img.cols).arg(img.rows));
     }
 }
 
@@ -612,7 +614,7 @@ void QCR::edgeDetection()
 
     std::vector<cv::Vec4i> lines;
     cv::HoughLinesP(black, lines, 1, CV_PI / 180, 50, 100, 50);
-    printLog(tr(u8"Detected lines: ") + QString::number(lines.size()));
+    printLog(QString::fromUtf8(u8"Detected lines: %1").arg(lines.size()));
 
     // 四个顶点: 左上、右上、右下、左下
     std::vector<cv::Point> points;
@@ -633,8 +635,7 @@ void QCR::edgeDetection()
     {
         double _x = static_cast<double>(p.x) / img.cols;
         double _y = static_cast<double>(p.y) / img.rows;
-        printLog(tr(u8"x_rel = ") + QString::number(_x)
-            + tr(u8", y = ") + QString::number(_y));
+        printLog(QString::fromUtf8(u8"x_rel = %1, y = %2").arg(_x).arg(_y));
         points_rel.push_back({ _x, _y });
     }
 
@@ -682,7 +683,7 @@ void QCR::processImage()
     // 距离精度1像素、角度精度1°、最少交点数200、最小长度200、最长断连50像素
     HoughLinesP(canny_h, h_lines, 1, CV_PI / 180, 50, 100, 50);
     std::vector<cv::Vec3d> lines_h = mergeLines(h_lines, true);
-    printLog(QObject::tr("rows = ") + QString::number(lines_h.size()));
+    printLog(QString::fromUtf8("rows = %1").arg(lines_h.size()));
 
     cv::Mat struct_v = cv::getStructuringElement(
         cv::MORPH_RECT, cv::Size(1, 40));
@@ -698,7 +699,7 @@ void QCR::processImage()
     // 距离精度1像素、角度精度1°、最少交点数200、最小长度200、最长断连50像素
     HoughLinesP(canny_v, v_lines, 1, CV_PI / 180, 50, 100, 50);
     std::vector<cv::Vec3d> lines_v = mergeLines(v_lines, false);
-    printLog(QObject::tr("cols = ") + QString::number(lines_v.size()));
+    printLog(QString::fromUtf8("cols = %1").arg(lines_v.size()));
 
     cv::Mat mat_table;
     bitwise_and(mat_h, mat_v, mat_table);
@@ -724,7 +725,7 @@ void QCR::processImage()
         int y = sum_y / contour.size();
         points_list.push_back(cv::Point(x, y));
     }
-    printLog(QObject::tr("Point count = ") + QString::number(points_list.size()));
+    printLog(QString::fromUtf8("Point count = ").arg(points_list.size()));
 
     return;
 }
@@ -831,7 +832,7 @@ void QCR::interceptImage()
 {
     if (img_path.isEmpty())
     {
-        MyMessageBox msg(tr(u8"请先打开一张图片!\n"));
+        MyMessageBox msg(QString::fromUtf8(u8"请先打开一张图片!"));
         msg.exec();
         return;
     }
@@ -880,8 +881,7 @@ void QCR::interceptImage()
     cv::warpPerspective(img, dst_img, M, cv::Size(width, height),
         cv::BORDER_REPLICATE);
     QFileInfo info(img_path);
-    img_trans_path = tr(u8"./tmp/") + info.baseName()
-        + tr(u8"_TRANS.") + info.suffix();
+    img_trans_path = QString::fromUtf8(u8"./tmp/%1_TRANS.%2").arg(info.baseName()).arg(info.suffix());
     cv::imwrite(img_trans_path.toLocal8Bit().data(), dst_img);
     ui.ui_img_widget->setPix(QPixmap(img_trans_path));
 }
@@ -894,7 +894,7 @@ void QCR::closeEvent(QCloseEvent *event)
     {
         if (!dir.removeRecursively())
         {
-            MyMessageBox msg(tr(u8"尝试清理 tmp 文件夹失败!"));
+            MyMessageBox msg(QString::fromUtf8(u8"尝试清理 tmp 文件夹失败!"));
             msg.exec();
             event->accept();
         }
@@ -904,7 +904,7 @@ void QCR::closeEvent(QCloseEvent *event)
     if (initial_thread->isRunning())
     {
         initial_thread->quit();
-        MyMessageBox msg(tr(u8"程序将在初始化线程结束后关闭!"));
+        MyMessageBox msg(QString::fromUtf8(u8"程序将在初始化线程结束后关闭!"));
         msg.setWindowIcon(QIcon(":/images/logo.png"));
         connect(initial_thread, &QThread::finished, &msg, &QDialog::accept);
         msg.exec();
