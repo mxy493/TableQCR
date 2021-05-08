@@ -1,4 +1,4 @@
-﻿#include <QFileDialog>
+#include <QFileDialog>
 #include <QTextStream>
 #include <QDateTime>
 #include <QIODevice>
@@ -807,6 +807,12 @@ void QCR::txParseData(const std::string &str)
         int row_span = cell.at("RowBr") - row;
         int col_span = cell.at("ColBr") - col;
 
+        // 去除非中英文和数字
+        std::string text = cell.at("Text");
+        QString _text = QString::fromUtf8(text.c_str());
+        _text.remove(QRegularExpression("[^\u4e00-\u9fa5a-zA-Z0-9]+"));
+        text = _text.toStdString();
+
         std::vector<std::vector<int>> polygon;
         for (json point : cell.at("Polygon"))
             polygon.push_back({ point.at("X"), point.at("Y") });
@@ -817,7 +823,7 @@ void QCR::txParseData(const std::string &str)
         json _cell = {
             {"row_span", row_span},
             {"col_span", col_span},
-            {"text", cell.at("Text")},
+            {"text", text},
             {"polygon", polygon}
         };
         ocr_result[srow] += {scol, _cell};
@@ -850,6 +856,11 @@ void QCR::bdParseData(const std::string &str)
         int row_span = *std::max_element(rols.begin(), rols.end()) - row;
         int col_span = *std::max_element(cols.begin(), cols.end()) - col;
 
+        std::string text = cell.at("word");
+        QString _text = QString::fromUtf8(text.c_str());
+        _text.remove(QRegularExpression("[^\u4e00-\u9fa5a-zA-Z0-9]+"));
+        text = _text.toStdString();
+
         int left = cell.at("rect").at("left");
         int top = cell.at("rect").at("top");
         int right = left + cell.at("rect").at("width");
@@ -864,7 +875,7 @@ void QCR::bdParseData(const std::string &str)
         json _cell = {
             {"row_span", row_span},
             {"col_span", col_span},
-            {"text", cell.at("word")},
+            {"text", text},
             {"polygon", polygon}
         };
         ocr_result[srow] += {scol, _cell};
