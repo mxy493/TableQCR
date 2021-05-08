@@ -12,6 +12,6 @@ MyMessageBox::MyMessageBox(const QString &text)
 {
     this->setWindowIcon(QIcon(":/images/logo.png"));
     this->setIcon(QMessageBox::Warning);
-    this->setWindowTitle(tr(u8"注意"));
+    this->setWindowTitle(QString::fromUtf8(u8"注意"));
     this->setText(text);
 }

@@ -48,35 +48,35 @@ void ConfigDialog::loadConfig()
                 QString key = ls[0];
                 QString value = ls[1];
                 for (int i = 2; i < ls.size(); ++i)
-                    value.append(tr(u8"=") + ls[i]);
+                    value.append(QString::fromUtf8(u8"=") + ls[i]);
 
                 // 更新界面值
-                if (key == tr("service_provider"))
+                if (key == QString::fromUtf8(u8"service_provider"))
                 {
                     int index = ui.combo_service_provider->findText(value);
                     ui.combo_service_provider->setCurrentIndex(index);
                 }
-                else if (key == tr("img_length"))
+                else if (key == QString::fromUtf8(u8"img_length"))
                     ui.line_img_length->setText(value);
-                else if (key == tr("img_size"))
+                else if (key == QString::fromUtf8(u8"img_size"))
                     ui.line_img_size->setText(value);
 
-                else if (key == tr("tx_url"))
+                else if (key == QString::fromUtf8(u8"tx_url"))
                     ui.line_tx_url->setText(value);
-                else if (key == tr("tx_secret_id"))
+                else if (key == QString::fromUtf8(u8"tx_secret_id"))
                     ui.line_tx_secret_id->setText(value);
-                else if (key == tr("tx_secret_key"))
+                else if (key == QString::fromUtf8(u8"tx_secret_key"))
                     ui.line_tx_secret_key->setText(value);
 
-                else if (key == tr("bd_get_token_url"))
+                else if (key == QString::fromUtf8(u8"bd_get_token_url"))
                     ui.line_bd_get_token_url->setText(value);
-                else if (key == tr("bd_request_url"))
+                else if (key == QString::fromUtf8(u8"bd_request_url"))
                     ui.line_bd_request_url->setText(value);
-                else if (key == tr("bd_get_result_url"))
+                else if (key == QString::fromUtf8(u8"bd_get_result_url"))
                     ui.line_bd_get_result_url->setText(value);
-                else if (key == tr("bd_api_key"))
+                else if (key == QString::fromUtf8(u8"bd_api_key"))
                     ui.line_bd_api_key->setText(value);
-                else if (key == tr("bd_secret_key"))
+                else if (key == QString::fromUtf8(u8"bd_secret_key"))
                     ui.line_bd_secret_key->setText(value);
             }
         }

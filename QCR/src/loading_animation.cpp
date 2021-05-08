@@ -37,7 +37,7 @@ void LoadingAnimation::paintEvent(QPaintEvent *event)
 
     // 画文字
     painter.setPen(QColor(Qt::darkGray));
-    painter.setFont(QFont(tr(u8"微软雅黑"), 12, 400));
+    painter.setFont(QFont(QString::fromUtf8(u8"微软雅黑"), 12, 400));
     painter.drawText(QRect(0, w, w, h - w), Qt::AlignCenter, this->text);
 
     // 画图形
