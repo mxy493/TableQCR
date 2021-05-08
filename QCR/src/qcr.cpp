@@ -850,23 +850,15 @@ void QCR::interceptImage()
         points.push_back({ _x, _y });
     }
 
-    int x_collect[4] = { points[0][0], points[1][0], points[2][0], points[3][0] };
-    int y_collect[4] = { points[0][1], points[1][1], points[2][1], points[3][1] };
-
-    int left = int(*std::min_element(x_collect, x_collect + 4));
-    int right = int(*std::max_element(x_collect, x_collect + 4));
-    int top = int(*std::min_element(y_collect, y_collect + 4));
-    int bottom = int(*std::max_element(y_collect, y_collect + 4));
-
-    int width = right - left;
-    int height = bottom - top;
-
     // 选取区域的顶点
     cv::Point2f pointsf[4];
     pointsf[0] = cv::Point2f(points[0][0], points[0][1]);
     pointsf[1] = cv::Point2f(points[1][0], points[1][1]);
     pointsf[2] = cv::Point2f(points[2][0], points[2][1]);
     pointsf[3] = cv::Point2f(points[3][0], points[3][1]);
+
+    int width = std::sqrt(std::pow(points[1][0] - points[0][0], 2) + std::pow(points[1][1] - points[0][1], 2));
+    int height = std::sqrt(std::pow(points[3][0] - points[0][0], 2) + std::pow(points[3][1] - points[0][1], 2));
 
     // 变换后的顶点
     cv::Point2f pts_std[4];
@@ -878,8 +870,8 @@ void QCR::interceptImage()
     // 透视变换
     cv::Mat M = cv::getPerspectiveTransform(pointsf, pts_std);
     cv::Mat dst_img;
-    cv::warpPerspective(img, dst_img, M, cv::Size(width, height),
-        cv::BORDER_REPLICATE);
+    cv::warpPerspective(img, dst_img, M, cv::Size(width, height), cv::BORDER_REPLICATE);
+
     QFileInfo info(img_path);
     img_trans_path = QString::fromUtf8(u8"./tmp/%1_TRANS.%2").arg(info.baseName()).arg(info.suffix());
     cv::imwrite(img_trans_path.toLocal8Bit().data(), dst_img);
