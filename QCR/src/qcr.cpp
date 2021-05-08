@@ -6,9 +6,6 @@
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/imgproc.hpp"
 
-#include <nlohmann/json.hpp>
-using json = nlohmann::json;
-
 #include "include/qcr.h"
 #include <include/base64.h>
 #include "include/helper.h"
@@ -179,6 +176,9 @@ void QCR::runOcr()
     // 此处打开加载动画, 模态对话框, 阻塞直到 t2 线程结束
     if (ocr_thread->isRunning())
         animation.start();
+
+    // 将数据写入表格
+    updateTable();
 }
 
 void QCR::runTxOcr(const std::string &base64_img)
@@ -755,6 +755,24 @@ void QCR::updateTableCell(int row, int col, int row_span, int col_span, const QS
         ui.ui_table_widget->setSpan(row, col, row_span, col_span);
 }
 
+void QCR::updateTable()
+{
+    resetTable();
+    // C++17
+    for (auto &[srow, cells] : ocr_result.items())
+    {
+        int row = std::stoi(srow);
+        for (auto &[scol, cell] : cells.items())
+        {
+            int col = std::stoi(scol);
+            int row_span = cell.at("row_span");
+            int col_span = cell.at("col_span");
+            std::string _s = cell.at("text");
+            updateTableCell(row, col, row_span, col_span, QString::fromUtf8(_s.c_str()));
+        }
+    }
+}
+
 void QCR::resetTable()
 {
     ui.ui_table_widget->clearContents();
@@ -776,18 +794,33 @@ void QCR::txParseData(const std::string &str)
         if (tmp.size() > cells.size())
             cells = tmp;
     }
-    resetTable();
+
+    ocr_result.clear();
     for (const auto &cell : cells)
     {
         // 最小值作为该格子的左上角单元格坐标
         int row = cell.at("RowTl");
+        std::string srow = std::to_string(row);
         int col = cell.at("ColTl");
+        std::string scol = std::to_string(col);
+
         int row_span = cell.at("RowBr") - row;
         int col_span = cell.at("ColBr") - col;
-        std::string _s = cell.at("Text");
-        QString text = QString::fromUtf8(_s.c_str());
 
-        updateTableCell(row, col, row_span, col_span, text);
+        std::vector<std::vector<int>> polygon;
+        for (json point : cell.at("Polygon"))
+            polygon.push_back({ point.at("X"), point.at("Y") });
+
+        // 存到 ocr_result
+        if(!ocr_result.contains(srow))
+            ocr_result += {srow, json::object()};
+        json _cell = {
+            {"row_span", row_span},
+            {"col_span", col_span},
+            {"text", cell.at("Text")},
+            {"polygon", polygon}
+        };
+        ocr_result[srow] += {scol, _cell};
     }
 }
 
@@ -799,22 +832,42 @@ void QCR::bdParseData(const std::string &str)
     if (result_data.at("form_num") == 0)
         return;
     auto table = result_data.at("forms").at(0).at("body");
-    resetTable();
+
+    ocr_result.clear();
     for (const auto &cell : table)
     {
+        std::cout << cell << endl;
         // 占据的行列数列表
         std::vector<int> rols = cell.at("row");
         std::vector<int> cols = cell.at("column");
 
         // 最小值作为该格子的左上角单元格坐标
         int row = *std::min_element(rols.begin(), rols.end()) - 1;
+        std::string srow = std::to_string(row);
         int col = *std::min_element(cols.begin(), cols.end()) - 1;
+        std::string scol = std::to_string(col);
+
         int row_span = *std::max_element(rols.begin(), rols.end()) - row;
         int col_span = *std::max_element(cols.begin(), cols.end()) - col;
-        std::string _s = cell.at("word");
-        QString text = QString::fromUtf8(_s.c_str());
 
-        updateTableCell(row, col, row_span, col_span, text);
+        int left = cell.at("rect").at("left");
+        int top = cell.at("rect").at("top");
+        int right = left + cell.at("rect").at("width");
+        int bottom = top + cell.at("rect").at("height");
+
+        std::vector<std::vector<int>> polygon = {
+            {left, top}, {right, top}, {right, bottom}, {left, bottom} };
+
+        // 存到 ocr_result
+        if (!ocr_result.contains(srow))
+            ocr_result += {srow, json::object()};
+        json _cell = {
+            {"row_span", row_span},
+            {"col_span", col_span},
+            {"text", cell.at("word")},
+            {"polygon", polygon}
+        };
+        ocr_result[srow] += {scol, _cell};
     }
 }
 

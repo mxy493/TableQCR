@@ -2,7 +2,9 @@
 
 #include <QThread>
 
-#include "opencv2/core.hpp"
+#include <opencv2/core.hpp>
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 #include <iostream>
 
@@ -28,6 +30,7 @@ public:
     void edgeDetection();
     void processImage();
     void updateTableCell(int row, int col, int row_span, int col_span, const QString &text);
+    void updateTable();
     void resetTable();
     void txParseData(const std::string &str);
     void bdParseData(const std::string &str);
@@ -69,4 +72,20 @@ private:
     QString img_trans_path;  // 透视变换后的图片路径
 
     std::string bd_access_token;
+
+    /*
+    * 将数据统一格式化为
+    * {
+    *   "[row]": {
+    *     "[col]": {
+    *       "row_span": 1,
+    *       "col_span": 1,
+    *       "text": "text",
+    *       "polygon": [[x1, y1],[x2,y2],[x3,y3],[x4,y4]]
+    *     }
+    *   }
+    * }
+    * 方便直接根据行列坐标定位某单元格的信息
+    */
+    json ocr_result = json::object();
 };
