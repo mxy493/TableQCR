@@ -66,7 +66,7 @@ QCR::QCR(QWidget *parent)
 void QCR::getBdAccessToken()
 {
     QDateTime now = QDateTime::currentDateTime();
-    QString token_path = QString::fromUtf8(u8"./data/token_%1.txt").arg(now.toString(QString("yyyyMMdd")));
+    QString token_path = QString::fromUtf8(u8"./data/bd_%1.token").arg(now.toString(QString("yyyyMMdd")));
     QFile file(token_path);
     if (file.exists() && file.open(QIODevice::ReadOnly))
     {
@@ -78,6 +78,16 @@ void QCR::getBdAccessToken()
     }
     else
     {
+        // 删除data目录下所有token的文件
+        QDir dir("data");
+        QFileInfoList list = dir.entryInfoList(QStringList({ "bd_*.token" }), QDir::Files);
+        for (auto &file : list)
+        {
+            bool ret = QFile::remove(file.absoluteFilePath());
+            if (ret)
+                printLog(QString::fromUtf8(u8"删除过期百度Token: %1").arg(file.absoluteFilePath()));
+        }
+        
         // 获取token, 没过期就不需要重新获取
         QString tmp = config_dialog.ui.line_bd_get_token_url->text();
         std::string bd_get_token_url = tmp.toStdString();
