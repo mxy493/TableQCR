@@ -584,7 +584,6 @@ void QCR::edgeDetection()
         cv::resize(img, img, cv::Size(), scale, scale, cv::INTER_AREA);
     }
 
-
     // 检查是否为灰度图，如果不是，转化为灰度图
     cv::Mat gray = img.clone();
     if (img.channels() == 3)
@@ -594,9 +593,15 @@ void QCR::edgeDetection()
     cv::Mat blured;
     cv::bilateralFilter(gray, blured, 5, 70, 70);
 
+    // 自动计算阈值
+    cv::Mat _tmp;
+    double otsu_thresh_val = cv::threshold(
+        blured, _tmp, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
+    printLog("Otsu thresh value: " + std::to_string(otsu_thresh_val));
+
     // 边缘检测
     cv::Mat canny;
-    Canny(blured, canny, 30, 60);
+    Canny(blured, canny, 0.5 * otsu_thresh_val, otsu_thresh_val);
     // 如果表格外围没有更多文字或其他干扰因素, 加上以下两行应该可以获得更好的轮廓
     //cv::dilate(canny, canny, cv::Mat());
     //Canny(canny, canny, 50, 150);
