@@ -897,6 +897,142 @@ void QCR::bdParseData(const std::string &str)
     }
 }
 
+void QCR::getScoreColumn(std::vector<std::vector<int>>& rects)
+{
+    for (int j = 0; j < ui.ui_table_widget->columnCount(); ++j)
+    {
+        // 分数列的像素范围
+        std::vector<int> ls;
+        std::vector<int> rs;
+        std::vector<int> ts;
+        std::vector<int> bs;
+
+        int cnt_bad = 0;
+        int cnt_all = 0;
+        for (int i = 0; i < ui.ui_table_widget->rowCount(); ++i)
+        {
+            std::string srow = std::to_string(i);
+            std::string scol = std::to_string(j);
+
+            if (!ocr_result.contains(srow))
+                continue;
+            if (!ocr_result.at(srow).contains(scol))
+                continue;
+
+            ++cnt_all;
+
+            auto &rect = ocr_result.at(srow).at(scol).at("polygon");
+
+            int l = (*std::min_element(rect.begin(), rect.end(),
+                [=](auto p1, auto p2) { return p1.at(0) < p2.at(0); })).at(0);
+            int r = (*std::max_element(rect.begin(), rect.end(),
+                [=](auto p1, auto p2) { return p1.at(0) < p2.at(0); })).at(0);
+            int t = (*std::min_element(rect.begin(), rect.end(),
+                [=](auto p1, auto p2) { return p1.at(1) < p2.at(1); })).at(1);
+            int b = (*std::max_element(rect.begin(), rect.end(),
+                [=](auto p1, auto p2) { return p1.at(1) < p2.at(1); })).at(1);
+
+            ls.push_back(l);
+            rs.push_back(r);
+            ts.push_back(t);
+            bs.push_back(b);
+
+            int vote = 0; // 记分制
+            int type = 0; // 文本中包含的类型数量, 范围[0-3], 即[空、中文、英文、数字]
+            std::string _text = ocr_result.at(srow).at(scol).at("text");
+            QString text = QString::fromUtf8(_text.c_str());
+
+            // 如果包含"平"、"时"任意一个字，则认为这一行以下为分数区域
+            if (text.contains(QRegularExpression(u8"[平时成绩]+")))
+            {
+                printLog(QString::fromUtf8(u8"匹配到某个字符(平、时、成、绩): %1").arg(text));
+                ls.clear();
+                rs.clear();
+                ts.clear();
+                bs.clear();
+                ls.push_back(l);
+                rs.push_back(r);
+                ts.push_back(b); // 不包括该单元格
+                bs.push_back(b);
+            }
+
+            if (text.contains(QRegularExpression(u8"[一-龥]+")))
+                ++type;
+            if (text.contains(QRegularExpression(u8"[a-zA-Z]+")))
+                ++type;
+            if (text.contains(QRegularExpression(u8"[0-9]+")))
+            {
+                ++type;
+                ++vote; // 包含数字则其本身就是数字的可能性更大
+            }
+            else
+                --vote;
+
+            // 文本类型多于一种极有可能是其中一种识别错误
+            if (type == 1)
+                ++vote;
+            else if(type > 1)
+                vote += 2;
+
+            // 字符数量为0极有可能是异常字符已经被去除掉
+            if (text.size() >= 0 && text.size() <= 2)
+                vote += 2;
+            else if (text.size() == 3)
+                ++vote;
+            else
+                vote -= 2;
+
+            // 认为这一列是分数列
+            if (vote >= 2)
+                ++cnt_bad;
+        }
+        // 占比超过1/5认为第j列是分数列, 获取其像素范围
+        if (4 * cnt_bad > cnt_all)
+        {
+            // 删除偏差较大的right像素值
+            double ave;
+            double sd;
+            calAveSd(rs, ave, sd);
+            for (int i = 0; i < rs.size(); ++i)
+            {
+                if (rs[i] < ave - sd || rs[i] > ave + sd)
+                {
+                    ls.erase(ls.begin() + i);
+                    rs.erase(rs.begin() + i);
+                    ts.erase(ts.begin() + i);
+                    bs.erase(bs.begin() + i);
+                }
+            }
+            int left = *std::min_element(ls.begin(), ls.end());
+            int right = *std::max_element(rs.begin(), rs.end());
+            int top = *std::min_element(ts.begin(), ts.end());
+            int bottom = *std::max_element(bs.begin(), bs.end());
+            rects.push_back({ j, left, right,top,bottom });
+            printLog(QString::fromUtf8(u8"分数列: { %1, %2, %3, %4, %5 }").arg(j).arg(left).arg(right).arg(top).arg(bottom));
+        }
+    }
+
+    if (rects.empty())
+        return;
+    // 从左到右排序
+    std::sort(rects.begin(), rects.end(), [=](auto rc1, auto rc2) { return rc1[1] < rc2[1]; });
+    for (int i = 1; i < rects.size(); ++i)
+    {
+        if (rects[i - 1][2] - rects[i][1] >
+            std::min(rects[i - 1][2] - rects[i - 1][1], rects[i][2] - rects[i][1]) / 2)
+        {
+            rects[i - 1][2] = std::max(rects[i - 1][2], rects[i][2]);
+            rects[i - 1][3] = std::min(rects[i - 1][3], rects[i][3]);
+            rects[i - 1][4] = std::max(rects[i - 1][4], rects[i][4]);
+            printLog(QString::fromUtf8(u8"合并%1,%2列: { %3, %4, %5, %6}")
+                .arg(rects[i - 1][0]).arg(rects[i][0])
+                .arg(rects[i - 1][1]).arg(rects[i - 1][2]).arg(rects[i - 1][3]).arg(rects[i - 1][4]));
+            rects.erase(rects.begin() + i);
+            --i;
+        }
+    }
+}
+
 void QCR::calAveSd(const std::vector<double> &vec, double &ave, double &sd)
 {
     if (vec.empty())
@@ -905,6 +1041,14 @@ void QCR::calAveSd(const std::vector<double> &vec, double &ave, double &sd)
     ave = std::accumulate(vec.begin(), vec.end(), 0.0) / n;
     sd = std::sqrt(std::accumulate(vec.begin(), vec.end(), 0.0,
         [=](double sum, double d) {return sum += std::pow(d - ave, 2); }) / n);
+}
+
+void QCR::calAveSd(const std::vector<int> &vec, double &ave, double &sd)
+{
+    std::vector<double> v;
+    for (auto val : vec)
+        v.push_back(static_cast<double>(val));
+    return calAveSd(v, ave, sd);
 }
 
 void QCR::interceptImage()
