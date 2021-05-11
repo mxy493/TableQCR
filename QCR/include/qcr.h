@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <QThread>
 
@@ -34,8 +34,11 @@ public:
     void resetTable();
     void txParseData(const std::string &str);
     void bdParseData(const std::string &str);
+    // 根据某一列的文本内容判断其是否是分数列, 返回所有分数列的像素范围及其对应的列数[col, left, right, top, bottom]
+    void getScoreColumn(std::vector<std::vector<int>> &rects);
     // 计算平均值和标准差
     void calAveSd(const std::vector<double> &vec, double &ave, double &sd);
+    void calAveSd(const std::vector<int> &vec, double &ave, double &sd);
     void getVertexes(std::vector<cv::Vec4i> &lines, std::vector<cv::Point> &points);
     void closeEvent(QCloseEvent *event);
 
