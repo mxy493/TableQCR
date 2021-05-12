@@ -907,8 +907,9 @@ void QCR::getScoreColumn(std::vector<std::vector<int>>& rects)
         std::vector<int> ts;
         std::vector<int> bs;
 
-        int cnt_bad = 0;
         int cnt_all = 0;
+        int cnt_score = 0;
+        bool is_score_column = false;
         for (int i = 0; i < ui.ui_table_widget->rowCount(); ++i)
         {
             std::string srow = std::to_string(i);
@@ -937,15 +938,19 @@ void QCR::getScoreColumn(std::vector<std::vector<int>>& rects)
             ts.push_back(t);
             bs.push_back(b);
 
-            int vote = 0; // 记分制
-            int type = 0; // 文本中包含的类型数量, 范围[0-3], 即[空、中文、英文、数字]
             std::string _text = ocr_result.at(srow).at(scol).at("text");
             QString text = QString::fromUtf8(_text.c_str());
 
-            // 如果包含"平"、"时"任意一个字，则认为这一行以下为分数区域
+            // 如果包含"平"、"时"、"成"、"绩"任意一个字，则认为这一行以下为分数区域
+            // 表头为印刷体, 一般都能识别出并匹配到相关字符
             if (text.contains(QRegularExpression(u8"[平时成绩]+")))
             {
                 printLog(QString::fromUtf8(u8"匹配到某个字符(平、时、成、绩): %1").arg(text));
+                if (text.contains(u8"平时") || text.contains(u8"成绩"))
+                    is_score_column = true;
+                // 重新开始计数
+                cnt_all = 0;
+                cnt_score = 0;
                 ls.clear();
                 rs.clear();
                 ts.clear();
@@ -956,38 +961,21 @@ void QCR::getScoreColumn(std::vector<std::vector<int>>& rects)
                 bs.push_back(b);
             }
 
-            if (text.contains(QRegularExpression(u8"[一-龥]+")))
-                ++type;
-            if (text.contains(QRegularExpression(u8"[a-zA-Z]+")))
-                ++type;
-            if (text.contains(QRegularExpression(u8"[0-9]+")))
-            {
-                ++type;
-                ++vote; // 包含数字则其本身就是数字的可能性更大
-            }
-            else
-                --vote;
+            int has_zh = text.contains(QRegularExpression(u8"[一-龥]+"));
+            int has_en = text.contains(QRegularExpression(u8"[a-zA-Z]+"));
+            int has_num = text.contains(QRegularExpression(u8"[0-9]+"));
+            // 文本中包含的类型数量, 范围[0-3], 即[空、中文、英文、数字]
+            int type = has_zh + has_en + has_num;
+            int sz = text.size();
 
-            // 文本类型多于一种极有可能是其中一种识别错误
-            if (type == 1)
-                ++vote;
-            else if(type > 1)
-                vote += 2;
-
-            // 字符数量为0极有可能是异常字符已经被去除掉
-            if (text.size() >= 0 && text.size() <= 2)
-                vote += 2;
-            else if (text.size() == 3)
-                ++vote;
-            else
-                vote -= 2;
-
-            // 认为这一列是分数列
-            if (vote >= 2)
-                ++cnt_bad;
+            // 类型不止一种且字符数不超过2两个
+            if (sz <= 2 && type > 1)
+                ++cnt_score;
+            // 只有数字一种类型且字符数不超过两个
+            if (sz <= 2 && type == 1 && has_num)
+                ++cnt_score;
         }
-        // 占比超过1/5认为第j列是分数列, 获取其像素范围
-        if (4 * cnt_bad > cnt_all)
+        if (is_score_column || (!is_score_column && 4 * cnt_score > cnt_all))
         {
             // 删除偏差较大的right像素值
             double ave;
