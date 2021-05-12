@@ -825,7 +825,7 @@ void QCR::txParseData(const std::string &str)
         // 去除非中英文和数字
         std::string text = cell.at("Text");
         QString _text = QString::fromUtf8(text.c_str());
-        _text.remove(QRegularExpression("[^\u4e00-\u9fa5a-zA-Z0-9]+"));
+        _text.remove(QRegularExpression(u8"[^一-龥a-zA-Z0-9]+"));
         text = _text.toStdString();
 
         std::vector<std::vector<int>> polygon;
@@ -873,7 +873,7 @@ void QCR::bdParseData(const std::string &str)
 
         std::string text = cell.at("word");
         QString _text = QString::fromUtf8(text.c_str());
-        _text.remove(QRegularExpression("[^\u4e00-\u9fa5a-zA-Z0-9]+"));
+        _text.remove(QRegularExpression(u8"[^一-龥a-zA-Z0-9]+"));
         text = _text.toStdString();
 
         int left = cell.at("rect").at("left");
