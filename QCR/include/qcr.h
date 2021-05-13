@@ -45,6 +45,7 @@ public:
 public slots:
     void openImage();
     void interceptImage();
+    void undo();
     void runOcr();
     void runTxOcr(const std::string &base64_img);
     void runBdOcr(const std::string &base64_img);
@@ -64,6 +65,7 @@ private:
 
     QAction *open_action;    // 打开按钮
     QAction *crop_action;    // 裁剪按钮
+    QAction *undo_action;      // 恢复按钮
     QAction *ocr_action;     // 识别按钮
     QAction *export_action;  // 导出按钮
     QAction *config_action;  // 设置按钮
