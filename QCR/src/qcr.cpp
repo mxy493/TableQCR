@@ -23,7 +23,8 @@ QCR::QCR(QWidget *parent)
     setCentralWidget(ui.central_widget);
 
     open_action = new QAction(QIcon(":/images/act_open.svg"), QString::fromUtf8(u8"打开"));
-    crop_action = new QAction(QIcon(":/images/act_crop.svg"), QString::fromUtf8(u8"矫正"));
+    crop_action = new QAction(QIcon(":/images/act_crop.svg"), QString::fromUtf8(u8"校正"));
+    undo_action = new QAction(QIcon(":/images/act_undo.svg"), QString::fromUtf8(u8"恢复"));
     ocr_action = new QAction(QIcon(":/images/act_ocr.svg"), QString::fromUtf8(u8"识别"));
     export_action = new QAction(QIcon(":/images/act_export.svg"), QString::fromUtf8(u8"导出"));
     config_action = new QAction(QIcon(":/images/act_config.svg"), QString::fromUtf8(u8"设置"));
@@ -31,6 +32,7 @@ QCR::QCR(QWidget *parent)
 
     ui.toolbar->addAction(open_action);
     ui.toolbar->addAction(crop_action);
+    ui.toolbar->addAction(undo_action);
     ui.toolbar->addAction(ocr_action);
     ui.toolbar->addAction(export_action);
     ui.toolbar->addAction(config_action);
@@ -38,6 +40,7 @@ QCR::QCR(QWidget *parent)
 
     connect(open_action, SIGNAL(triggered()), this, SLOT(openImage()));
     connect(crop_action, &QAction::triggered, this, &QCR::interceptImage);
+    connect(undo_action, &QAction::triggered, this, &QCR::undo);
     connect(ocr_action, &QAction::triggered, this, &QCR::runOcr);
     connect(export_action, SIGNAL(triggered()), this, SLOT(exportTableData()));
     connect(config_action, &QAction::triggered, &config_dialog, &ConfigDialog::exec);
@@ -1087,6 +1090,18 @@ void QCR::interceptImage()
     img_trans_path = QString::fromUtf8(u8"./tmp/%1_TRANS.%2").arg(info.baseName()).arg(info.suffix());
     cv::imwrite(img_trans_path.toLocal8Bit().data(), dst_img);
     ui.ui_img_widget->setPix(QPixmap(img_trans_path));
+}
+
+void QCR::undo()
+{
+    QFile file(img_trans_path);
+    if (file.exists())
+    {
+        // 删除裁剪后的图片并显示原图片
+        file.remove();
+        img_trans_path.clear();
+        ui.ui_img_widget->setPix(QPixmap(img_path));
+    }
 }
 
 void QCR::closeEvent(QCloseEvent *event)
