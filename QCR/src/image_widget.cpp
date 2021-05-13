@@ -200,12 +200,9 @@ void ImageWidget::drawInterceptBox(QPainter &painter)
     // 画圈和连接线
     painter.setRenderHints(QPainter::Antialiasing, true);
     painter.setPen(QPen(QBrush(Qt::red), 3));
-    for (const auto &p : intercept_abs)
+    for (int i = 0; i < intercept_abs.size(); ++i)
     {
-        painter.drawEllipse(p, CIRCLE_SIZE, CIRCLE_SIZE);
+        painter.drawEllipse(intercept_abs[i], CIRCLE_SIZE, CIRCLE_SIZE);
+        painter.drawLine(intercept_abs[i], intercept_abs[(i + 1) % 4]);
     }
-    painter.drawLine(intercept_abs[0], intercept_abs[1]);
-    painter.drawLine(intercept_abs[1], intercept_abs[2]);
-    painter.drawLine(intercept_abs[2], intercept_abs[3]);
-    painter.drawLine(intercept_abs[3], intercept_abs[0]);
 }
