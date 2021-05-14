@@ -137,8 +137,8 @@ void QCR::openImage()
 
                 // 复制并压缩图片
                 QFile file(path);
-                img_path = QString::fromUtf8(u8"./tmp/QCR_%1.jpg").arg(getCurTimeString());
-                img_trans_path.clear();
+                img_path = QString::fromUtf8(u8"./tmp/qcr_%1.jpg").arg(getCurTimeString());
+                img_path_cropped.clear();
                 file.copy(img_path);
                 printLog(QString::fromUtf8(u8"已创建副本: ") + img_path);
                 resizeImage(img_path);
@@ -151,7 +151,7 @@ void QCR::openImage()
 
 void QCR::runOcr()
 {
-    QString path = img_trans_path.isEmpty() ? img_path : img_trans_path;
+    QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
     if (path.isEmpty())
     {
         MyMessageBox msg(QString::fromUtf8(u8"请先打开一张图片!"));
@@ -173,7 +173,7 @@ void QCR::runOcr()
 
             QString service_provider = config_dialog.ui.combo_service_provider->currentText();
             if (service_provider.contains(QString::fromUtf8(u8"腾讯")))
-            { 
+            {
                 printLog(QString::fromUtf8(u8"使用腾讯API识别表格"));
                 runTxOcr(base64_img);
             }
@@ -574,7 +574,7 @@ void QCR::edgeDetection()
     if (compress_thread->isRunning())
         compress_thread->wait();
 
-    QString path = img_trans_path.isEmpty() ? img_path : img_trans_path;
+    QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
     cv::Mat img = cv::imread(path.toLocal8Bit().data());
 
     // 缩小图片到宽高不超过 len 像素以加快处理速度
@@ -662,7 +662,7 @@ void QCR::edgeDetection()
 
 void QCR::processImage()
 {
-    QString path = img_trans_path.isEmpty() ? img_path : img_trans_path;
+    QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
     cv::Mat img = cv::imread(path.toLocal8Bit().data());
 
     // 检查是否为灰度图，如果不是，转化为灰度图
@@ -1051,7 +1051,7 @@ void QCR::interceptImage()
         return;
     }
 
-    QString path = img_trans_path.isEmpty() ? img_path : img_trans_path;
+    QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
     cv::Mat img = cv::imread(path.toLocal8Bit().data());
     std::vector<std::vector<double>> points_rel;
     ui.ui_img_widget->getVertex(points_rel);
@@ -1087,19 +1087,19 @@ void QCR::interceptImage()
     cv::warpPerspective(img, dst_img, M, cv::Size(width, height), cv::BORDER_REPLICATE);
 
     QFileInfo info(img_path);
-    img_trans_path = QString::fromUtf8(u8"./tmp/%1_TRANS.%2").arg(info.baseName()).arg(info.suffix());
-    cv::imwrite(img_trans_path.toLocal8Bit().data(), dst_img);
-    ui.ui_img_widget->setPix(QPixmap(img_trans_path));
+    img_path_cropped = QString::fromUtf8(u8"./tmp/%1_cropped.%2").arg(info.baseName()).arg(info.suffix());
+    cv::imwrite(img_path_cropped.toLocal8Bit().data(), dst_img);
+    ui.ui_img_widget->setPix(QPixmap(img_path_cropped));
 }
 
 void QCR::undo()
 {
-    QFile file(img_trans_path);
+    QFile file(img_path_cropped);
     if (file.exists())
     {
         // 删除裁剪后的图片并显示原图片
         file.remove();
-        img_trans_path.clear();
+        img_path_cropped.clear();
         ui.ui_img_widget->setPix(QPixmap(img_path));
     }
 }
