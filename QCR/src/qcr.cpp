@@ -192,6 +192,9 @@ void QCR::runOcr()
 
     // 将数据写入表格
     updateTable();
+
+    if (config_dialog.ui.check_auto_optimize->isChecked())
+        optimize();
 }
 
 void QCR::runTxOcr(const std::string &base64_img)
