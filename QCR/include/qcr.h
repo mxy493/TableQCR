@@ -74,7 +74,7 @@ private:
     QAction *test1_action;   // 测试1
 
     QString img_path;        // 图片路径
-    QString img_trans_path;  // 透视变换后的图片路径
+    QString img_path_cropped;  // 透视变换后的图片路径
 
     std::string bd_access_token;
 
