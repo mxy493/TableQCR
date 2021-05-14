@@ -279,8 +279,9 @@ void ImageWidget::drawInterceptBox(QPainter &painter)
         intercept_rel.append(QPointF(1, 0));
         intercept_rel.append(QPointF(1, 1));
         intercept_rel.append(QPointF(0, 1));
-        rel2abs();
     }
+    // 必须转换, 否则可能界面大小已经改变而绝对坐标还是之前的坐标
+    rel2abs();
 
     // 画圈和连接线
     painter.setRenderHints(QPainter::Antialiasing, true);
