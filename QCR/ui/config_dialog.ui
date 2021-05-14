@@ -62,7 +62,7 @@
          <x>10</x>
          <y>20</y>
          <width>711</width>
-         <height>81</height>
+         <height>109</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="grid_normal" columnstretch="1,2,1,2">
@@ -78,40 +78,6 @@
         <property name="bottomMargin">
          <number>10</number>
         </property>
-        <item row="0" column="0">
-         <widget class="QLabel" name="label_6">
-          <property name="text">
-           <string>OCR服务商</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QComboBox" name="combo_service_provider">
-          <property name="styleSheet">
-           <string notr="true"/>
-          </property>
-          <item>
-           <property name="text">
-            <string>腾讯</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>百度</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-        <item row="1" column="2">
-         <widget class="QLabel" name="label_img_size">
-          <property name="toolTip">
-           <string>由于接口限制, 图片大小通常不能超过4MB, 程序会自动将图片压缩到设定的大小以下!</string>
-          </property>
-          <property name="text">
-           <string>图片最大大小</string>
-          </property>
-         </widget>
-        </item>
         <item row="1" column="1">
          <widget class="QSpinBox" name="spin_img_length">
           <property name="frame">
@@ -134,16 +100,6 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="label_img_length">
-          <property name="toolTip">
-           <string>由于接口限制, 图片最长边像素通常不能超过4000像素, 程序会自动将图片等比例缩小到设定的像素值以下!</string>
-          </property>
-          <property name="text">
-           <string>图片最长边像素</string>
-          </property>
-         </widget>
-        </item>
         <item row="1" column="3">
          <widget class="QSpinBox" name="spin_img_size">
           <property name="suffix">
@@ -157,6 +113,60 @@
           </property>
           <property name="value">
            <number>4</number>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_6">
+          <property name="text">
+           <string>OCR服务商</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <widget class="QLabel" name="label_img_size">
+          <property name="toolTip">
+           <string>由于接口限制, 图片大小通常不能超过4MB, 程序会自动将图片压缩到设定的大小以下!</string>
+          </property>
+          <property name="text">
+           <string>图片最大大小</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_img_length">
+          <property name="toolTip">
+           <string>由于接口限制, 图片最长边像素通常不能超过4000像素, 程序会自动将图片等比例缩小到设定的像素值以下!</string>
+          </property>
+          <property name="text">
+           <string>图片最长边像素</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QComboBox" name="combo_service_provider">
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
+          <item>
+           <property name="text">
+            <string>腾讯</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>百度</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QCheckBox" name="check_auto_optimize"/>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label_7">
+          <property name="text">
+           <string>识别后自动优化</string>
           </property>
          </widget>
         </item>
