@@ -109,6 +109,7 @@
   <ItemGroup>
     <ClInclude Include="include\base64.h" />
     <ClInclude Include="include\bd_ocr.h" />
+    <ClInclude Include="include\digits_classify.h" />
     <ClInclude Include="include\tx_ocr.h" />
     <QtMoc Include="include\config_dialog.h" />
     <ClInclude Include="include\helper.h" />
@@ -122,6 +123,7 @@
     <ClCompile Include="src\base64.cpp" />
     <ClCompile Include="src\bd_ocr.cpp" />
     <ClCompile Include="src\config_dialog.cpp" />
+    <ClCompile Include="src\digits_classify.cpp" />
     <ClCompile Include="src\helper.cpp" />
     <ClCompile Include="src\image_widget.cpp" />
     <ClCompile Include="src\loading_animation.cpp" />
