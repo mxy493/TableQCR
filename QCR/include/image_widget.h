@@ -20,7 +20,10 @@ public:
     void getVertex(std::vector<std::vector<double>> &points);
     void abs2rel();
     void rel2abs();
+    void updatePos(const QPoint &p);
     bool isOk(const QPoint &p);
+    // 获取垂足坐标
+    QPoint getNeareastPoint(const QPoint &p);
     void drawImage(QPainter &painter);
     void setInterceptBox(const std::vector<std::vector<double>> &points);
     void drawInterceptBox(QPainter &painter);
