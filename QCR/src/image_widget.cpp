@@ -12,10 +12,11 @@ ImageWidget::~ImageWidget()
 
 void ImageWidget::mousePressEvent(QMouseEvent *event)
 {
-    inVertex(event->pos());
+    QPoint p = event->pos();
+    inVertex(p);
     if (vertex_index != -1)
     {
-        intercept_abs[vertex_index] = event->pos();
+        intercept_abs[vertex_index] = p;
         abs2rel();
         update();
     }
@@ -23,27 +24,13 @@ void ImageWidget::mousePressEvent(QMouseEvent *event)
 
 void ImageWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    QPoint p = event->pos();
-    if (vertex_index != -1)
-    {
-        if(isOk(p))
-            intercept_abs[vertex_index] = p;
-        abs2rel();
-        update();
-    }
+    updatePos(event->pos());
 }
 
 void ImageWidget::mouseReleaseEvent(QMouseEvent *event)
 {
-    QPoint p = event->pos();
-    if (vertex_index != -1)
-    {
-        if (isOk(p))
-            intercept_abs[vertex_index] = p;
-        update();
-        abs2rel();
-        vertex_index = -1;
-    }
+    updatePos(event->pos());
+    vertex_index = -1;
 }
 
 void ImageWidget::paintEvent(QPaintEvent *event)
@@ -109,52 +96,153 @@ void ImageWidget::rel2abs()
     }
 }
 
+void ImageWidget::updatePos(const QPoint &p)
+{
+    if (vertex_index != -1)
+    {
+        if (isOk(p))
+        {
+            intercept_abs[vertex_index] = p;
+            abs2rel();
+            update();
+        }
+        //else
+        //    intercept_abs[vertex_index] = getPedal(p);
+    }
+}
+
 bool ImageWidget::isOk(const QPoint &p)
 {
-    if (p.x() < h_margin || p.y() < v_margin
-        || p.x() > h_margin + scaled_pix.width()
-        || p.y() > v_margin + scaled_pix.height())
+    // 超出图片显示范围
+    if (p.x() < h_margin || p.y() < v_margin ||
+        p.x() > h_margin + scaled_pix.width() ||
+        p.y() > v_margin + scaled_pix.height())
     {
         return false;
     }
+
+    // 四条边向量
+    int v01[2] = { intercept_abs[1].x() - intercept_abs[0].x(),
+        intercept_abs[1].y() - intercept_abs[0].y() };
+    int v12[2] = { intercept_abs[2].x() - intercept_abs[1].x(),
+        intercept_abs[2].y() - intercept_abs[1].y() };
+    int v23[2] = { intercept_abs[3].x() - intercept_abs[2].x(),
+        intercept_abs[3].y() - intercept_abs[2].y() };
+    int v30[2] = { intercept_abs[0].x() - intercept_abs[3].x(),
+        intercept_abs[0].y() - intercept_abs[3].y() };
+    // 两对角线向量
+    int v02[2] = { intercept_abs[2].x() - intercept_abs[0].x(),
+        intercept_abs[2].y() - intercept_abs[0].y() };
+    int v13[2] = { intercept_abs[3].x() - intercept_abs[1].x(),
+        intercept_abs[3].y() - intercept_abs[1].y() };
+
+    bool ok = false;
+    switch (vertex_index)
+    {
+    case 0:
+    {
+        if (v01[0] * v12[1] - v01[1] * v12[0] >= 0 &&
+            v02[0] * v23[1] - v02[1] * v23[0] >= 0 &&
+            v01[0] * v13[1] - v01[1] * v13[0] >= 0)
+            ok = true;
+        break;
+    }
+    case 1:
+    {
+        if (v12[0] * v23[1] - v12[1] * v23[0] >= 0 &&
+            v13[0] * v30[1] - v13[1] * v30[0] >= 0 &&
+            v12[0] * v02[1] - v12[1] * v02[0] <= 0)
+            ok = true;
+        break;
+    }
+    case 2:
+    {
+        if (v23[0] * v30[1] - v23[1] * v30[0] >= 0 &&
+            v02[0] * v01[1] - v02[1] * v01[0] <= 0 &&
+            v23[0] * v13[1] - v23[1] * v13[0] <= 0)
+            ok = true;
+        break;
+    }
+    case 3:
+    {
+        if (v30[0] * v01[1] - v30[1] * v01[0] >= 0 &&
+            v13[0] * v12[1] - v13[1] * v12[0] <= 0 &&
+            v30[0] * v02[1] - v30[1] * v02[0] >= 0)
+            ok = true;
+        break;
+    }
+    default:
+        break;
+    }
+    return ok;
+}
+
+QPoint ImageWidget::getNeareastPoint(const QPoint &p)
+{
     QPoint A;
     QPoint B;
     switch (vertex_index)
     {
     case 0:
     {
-        A = intercept_abs[3];
-        B = intercept_abs[1];
-        break;
-    }
-    case 1:
-    {
-        A = intercept_abs[0];
-        B = intercept_abs[2];
-        break;
-    }
-    case 2:
-    {
         A = intercept_abs[1];
         B = intercept_abs[3];
         break;
     }
-    case 3:
+    case 1:
     {
         A = intercept_abs[2];
         B = intercept_abs[0];
         break;
     }
+    case 2:
+    {
+        A = intercept_abs[3];
+        B = intercept_abs[1];
+        break;
+    }
+    case 3:
+    {
+        A = intercept_abs[0];
+        B = intercept_abs[2];
+        break;
+    }
     default:
         break;
     }
-    int a[2] = { B.x() - A.x(), B.y() - A.y() };
-    int b[2] = { p.x() - A.x(), p.y() - A.y() };
+    double k1 = static_cast<double>(B.y() - A.y()) / (B.x() - A.x());
+    double k2 = -1 / k1;
 
-    if (a[0] * b[1] - a[1] * b[0] <= 0)
-        return true;
+    // 直线AB的方程
+    double A1 = B.y() - A.y();
+    double B1 = A.x() - B.x();
+    double C1 = B.x() * A.y() - A.x() * B.y();
+
+    // 垂线的方程
+    double A2 = k2;
+    double B2 = -1;
+    double C2 = -k2 * p.x() + p.y();
+
+    // 两直线的交点, 即垂点
+    int x = (B1 * C2 - B2 * C1) / (B2 * A1 - B1 * A2);
+    int y = (A1 * C2 - C1 * A2) / (B1 * A2 - A1 * B2);
+
+    double dab = std::sqrt(std::pow(B.x() - A.x(), 2) + std::pow(B.y() - A.y(), 2));
+    double da = std::sqrt(std::pow(x - A.x(), 2) + std::pow(y - A.y(), 2));
+    double db = std::sqrt(std::pow(x - B.x(), 2) + std::pow(y - B.y(), 2));
+
+    // 加一点可接受的误差, 否则极有可能由于误差导致始终认为垂点没在线段上
+    if (da + db > dab + 2)
+    {
+        if (da < db)
+            return A;
+        else
+            return B;
+    }
     else
-        return false;
+    {
+        return QPoint(x, y);
+    }
 }
 
 void ImageWidget::drawImage(QPainter &painter)
@@ -186,16 +274,13 @@ void ImageWidget::drawInterceptBox(QPainter &painter)
     if (initial)
     {
         initial = false;
-        intercept_abs.clear();
-        intercept_abs.append(QPoint(h_margin, v_margin));
-        intercept_abs.append(QPoint(h_margin + scaled_pix.width(), v_margin));
-        intercept_abs.append(QPoint(
-            h_margin + scaled_pix.width(), v_margin + scaled_pix.height()));
-        intercept_abs.append(QPoint(h_margin, v_margin + scaled_pix.height()));
-        abs2rel();
-    }
-    else
+        intercept_rel.clear();
+        intercept_rel.append(QPointF(0, 0));
+        intercept_rel.append(QPointF(1, 0));
+        intercept_rel.append(QPointF(1, 1));
+        intercept_rel.append(QPointF(0, 1));
         rel2abs();
+    }
 
     // 画圈和连接线
     painter.setRenderHints(QPainter::Antialiasing, true);
