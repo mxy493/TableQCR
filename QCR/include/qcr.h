@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <QThread>
 
@@ -36,6 +36,18 @@ public:
     void bdParseData(const std::string &str);
     // 根据某一列的文本内容判断其是否是分数列, 返回所有分数列的像素范围及其对应的列数[col, left, right, top, bottom]
     void getScoreColumn(std::vector<std::vector<int>> &rects);
+    // 按获取到的分数列像素范围切割图片并以"col_left_right_top_bottom.jpg"格式保存图片
+    void cropScoreColumn(const std::vector<std::vector<int>> &rects);
+    // 获取提取到的每个字符的坐标及其识别结果, 相对于切割前的图片[col, left, right, top, bottom, num]
+    void extractWords(std::vector<std::vector<std::vector<int>>> &words);
+    /*
+    * @brief 拼接识别出的同一行的多个数字
+    */
+    void combine(std::vector<std::vector<int>> &words, std::vector<int> &word);
+    // 将同一行识别到的多个数字拼接在一起
+    void spliceWords(std::vector<std::vector<std::vector<int>>> &words);
+    // 融合OCR和数字识别的结果
+    void fusion(std::vector<std::vector<std::vector<int>>> &words);
     // 计算平均值和标准差
     void calAveSd(const std::vector<double> &vec, double &ave, double &sd);
     void calAveSd(const std::vector<int> &vec, double &ave, double &sd);
@@ -49,6 +61,7 @@ public slots:
     void runOcr();
     void runTxOcr(const std::string &base64_img);
     void runBdOcr(const std::string &base64_img);
+    void optimize();
     void exportTableData();
     void recognize();
 
@@ -67,6 +80,7 @@ private:
     QAction *crop_action;    // 裁剪按钮
     QAction *undo_action;      // 恢复按钮
     QAction *ocr_action;     // 识别按钮
+    QAction *optimize_action;// 识别按钮
     QAction *export_action;  // 导出按钮
     QAction *config_action;  // 设置按钮
     QAction *about_action;   // 关于按钮
@@ -93,4 +107,5 @@ private:
     * 方便直接根据行列坐标定位某单元格的信息
     */
     json ocr_result = json::object();
+    const std::string model = "data/digits60000.weights";
 };

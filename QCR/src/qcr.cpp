@@ -1,4 +1,4 @@
-#include <QFileDialog>
+﻿#include <QFileDialog>
 #include <QTextStream>
 #include <QDateTime>
 #include <QIODevice>
@@ -12,6 +12,7 @@
 #include "include/my_message_box.h"
 #include "include/bd_ocr.h"
 #include "include/tx_ocr.h"
+#include "include/digits_classify.h"
 
 
 QCR::QCR(QWidget *parent)
@@ -26,6 +27,7 @@ QCR::QCR(QWidget *parent)
     crop_action = new QAction(QIcon(":/images/act_crop.svg"), QString::fromUtf8(u8"校正"));
     undo_action = new QAction(QIcon(":/images/act_undo.svg"), QString::fromUtf8(u8"恢复"));
     ocr_action = new QAction(QIcon(":/images/act_ocr.svg"), QString::fromUtf8(u8"识别"));
+    optimize_action = new QAction(QIcon(":/images/act_optimize.svg"), QString::fromUtf8(u8"优化"));
     export_action = new QAction(QIcon(":/images/act_export.svg"), QString::fromUtf8(u8"导出"));
     config_action = new QAction(QIcon(":/images/act_config.svg"), QString::fromUtf8(u8"设置"));
     about_action = new QAction(QIcon(":/images/act_about.svg"), QString::fromUtf8(u8"关于"));
@@ -34,6 +36,7 @@ QCR::QCR(QWidget *parent)
     ui.toolbar->addAction(crop_action);
     ui.toolbar->addAction(undo_action);
     ui.toolbar->addAction(ocr_action);
+    ui.toolbar->addAction(optimize_action);
     ui.toolbar->addAction(export_action);
     ui.toolbar->addAction(config_action);
     ui.toolbar->addAction(about_action);
@@ -42,6 +45,7 @@ QCR::QCR(QWidget *parent)
     connect(crop_action, &QAction::triggered, this, &QCR::interceptImage);
     connect(undo_action, &QAction::triggered, this, &QCR::undo);
     connect(ocr_action, &QAction::triggered, this, &QCR::runOcr);
+    connect(optimize_action, &QAction::triggered, this, &QCR::optimize);
     connect(export_action, SIGNAL(triggered()), this, SLOT(exportTableData()));
     connect(config_action, &QAction::triggered, &config_dialog, &ConfigDialog::exec);
     connect(about_action, SIGNAL(triggered()), &about_dlg, SLOT(show()));
@@ -55,6 +59,8 @@ QCR::QCR(QWidget *parent)
     ui.ui_table_widget->setStyleSheet(
         "QHeaderView::section{ background-color: whitesmoke }"
         "QTableWidget::item:selected{ color: black; background-color: lightcyan }");
+
+    init(model);
 
     // Putting the more time-consuming initialization work during program startup
     // into a separate thread.
@@ -1025,6 +1031,325 @@ void QCR::getScoreColumn(std::vector<std::vector<int>>& rects)
             --i;
         }
     }
+}
+
+void QCR::cropScoreColumn(const std::vector<std::vector<int>> &rects)
+{
+    QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
+    cv::Mat img = cv::imread(path.toLocal8Bit().data());
+    QFileInfo info(path);
+    QString base_name = info.baseName();
+    QDir dir(info.absolutePath() + QString("/") + base_name);
+    printLog(dir.absolutePath());
+    if (!dir.exists())
+    {
+        dir.setPath(info.absolutePath());
+        if (dir.mkdir(base_name))
+            printLog(QString::fromUtf8(u8"创建裁剪文件夹成功: /tmp/%1").arg(base_name));
+    }
+    else if (!dir.removeRecursively())
+    {
+        printLog(QString::fromUtf8(u8"尝试清空文件夹(%1)失败!").arg(dir.absolutePath()));
+    }
+
+    for (auto &rect : rects)
+    {
+        // 截取到图片的底部
+        cv::Rect rc(cv::Point(rect[1], rect[3]), cv::Point(rect[2], img.rows));
+        cv::Mat cropped = img(rc);
+        QString file_path = info.absolutePath() + QString("/") + base_name + QString("/")
+            + QString(u8"%1_%2_%3_%4_%5.jpg").arg(rect[0]).arg(rect[1]).arg(rect[2]).arg(rect[3]).arg(img.rows);
+        cv::imwrite(file_path.toLocal8Bit().data(), cropped);
+    }
+}
+
+void QCR::extractWords(std::vector<std::vector<std::vector<int>>> &words)
+{
+    QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
+    QFileInfo info(path);
+    QDir dir(info.absolutePath() + QString("/") + info.baseName());
+    if (!dir.exists())
+        return;
+    QFileInfoList ls = dir.entryInfoList(QStringList({ "*.jpg" }), QDir::Files);
+    for (auto &info : ls)
+    {
+        printLog(QString::fromUtf8(u8"开始处理: %1").arg(info.fileName()));
+        QString _s = info.baseName();
+        auto str_list = _s.split("_");
+        int _col = str_list[0].toInt();
+        int _left = str_list[1].toInt();
+        int _right = str_list[2].toInt();
+        int _top = str_list[3].toInt();
+        int _bottom = str_list[4].toInt();
+
+        cv::Mat img = cv::imread(info.absoluteFilePath().toLocal8Bit().data());
+        // 检查是否为灰度图，如果不是，转化为灰度图
+        cv::Mat gray = img.clone();
+        if (img.channels() == 3)
+            cv::cvtColor(img, gray, CV_BGR2GRAY);
+
+        // 双边滤波
+        cv::Mat blured;
+        cv::bilateralFilter(gray, blured, 5, 70, 70);
+
+        // 自适应均衡化，提高对比度，裁剪效果更好
+        cv::Mat proc;
+        cv::Ptr<cv::CLAHE> clahe = createCLAHE(1, cv::Size(10, 10));
+        clahe->apply(blured, proc);
+
+        // 阈值化，转化为黑白图片
+        cv::Mat img1;
+        adaptiveThreshold(proc, img1, 255,
+            CV_ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY_INV, 15, 10);
+
+        // 形态学, 保留较长的横竖线条
+        // 黑底白字, 腐蚀掉白字
+        cv::Mat struct_h = cv::getStructuringElement(
+            cv::MORPH_RECT, cv::Size(40, 1));
+        cv::Mat mat_h;
+        erode(img1, mat_h, struct_h, cv::Size(-1, -1), 2);
+        dilate(mat_h, mat_h, struct_h, cv::Size(-1, -1), 2);
+
+        cv::Mat struct_v = cv::getStructuringElement(
+            cv::MORPH_RECT, cv::Size(1, 40));
+        cv::Mat mat_v;
+        erode(img1, mat_v, struct_v, cv::Size(-1, -1), 2);
+        dilate(mat_v, mat_v, struct_v, cv::Size(-1, -1), 2);
+
+        cv::Mat mat_table;
+        bitwise_or(mat_h, mat_v, mat_table);
+        dilate(mat_table, mat_table, cv::Mat());
+
+        mat_table = 255 - mat_table;
+
+        // 灰度化后直接阈值化避免过多的处理丢失细节
+        cv::Mat img2;
+        adaptiveThreshold(gray, img2, 255,
+            CV_ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY_INV, 15, 10);
+
+        cv::Mat no_border;
+        bitwise_and(img2, mat_table, no_border);
+
+        // ---------- 提取文字框 ---------- //
+        std::vector<std::vector<cv::Point>> contours;
+        findContours(no_border, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+
+        // 对应一张图片（一列）的结果
+        std::vector<std::vector<int>> words_col;
+        cv::Mat tmp = img.clone();
+        for (auto &contour : contours)
+        {
+            cv::RotatedRect min_rect = cv::minAreaRect(contour);
+            printLog(QString("Angle: %1").arg(min_rect.angle));
+            
+            // 稍微扩大一点范围
+            cv::Size sz = min_rect.size;
+            sz.width += 2;
+            sz.height += 2;
+            cv::RotatedRect rect(min_rect.center, sz, min_rect.angle);
+            
+            // The points array for storing rectangle vertices. The order is bottomLeft, topLeft, topRight, bottomRight.
+            cv::Point2f points[4];
+            rect.points(points);
+
+            std::vector<double> xs;
+            std::vector<double> ys;
+            for (auto p : points)
+            {
+                xs.push_back(p.x);
+                ys.push_back(p.y);
+            }
+            double l = *std::min_element(xs.begin(), xs.end());
+            double r = *std::max_element(xs.begin(), xs.end());
+            double t = *std::min_element(ys.begin(), ys.end());
+            double b = *std::max_element(ys.begin(), ys.end());
+
+            double w = r - l;
+            double h = b - t;
+
+            // 数字基本不存在高度小于宽度的情况, 如果超过宽度超过高度的2倍认为不是数字
+            if (h < 10 || h > 50 || w < 5 || w > 50 || w > 2 * h)
+                continue;
+
+            // 变换后的顶点
+            cv::Point2f pts_std[4];
+            pts_std[0] = cv::Point2f(0., 0.);
+            pts_std[1] = cv::Point2f(rect.size.width, 0.);
+            pts_std[2] = cv::Point2f(rect.size.width, rect.size.height);
+            pts_std[3] = cv::Point2f(0., rect.size.height);
+
+            // 转换回去
+            cv::Point2f pts_rev[4];
+            for (int i = 0; i < 4; ++i)
+            {
+                pts_rev[i].x = points[i].x - l;
+                pts_rev[i].y = points[i].y - t;
+            }
+
+            // 透视变换
+            cv::Mat forward = cv::getPerspectiveTransform(points, pts_std);
+            cv::Mat reverse = cv::getPerspectiveTransform(pts_std, pts_rev);
+            cv::Mat word;
+            cv::warpPerspective(no_border, word, forward, cv::Size(rect.size.width, rect.size.height));
+            cv::warpPerspective(word, word, reverse, cv::Size(w, h));
+
+            // 拟合的矩形框
+            for (int i = 0; i < 4; ++i)
+                cv::line(tmp, points[i], points[(i + 1) % 4], cv::Scalar(0, 255, 255));
+
+            // 识别提取出的数字
+            int number = predict(word);
+            printLog(QString::fromUtf8(u8"Predict: %1").arg(number));
+            words_col.push_back({ _col, _left + static_cast<int>(l), _left + static_cast<int>(r),
+                _top + static_cast<int>(t), _top + static_cast<int>(b), number });
+        }
+        words.push_back(words_col);
+    }
+}
+
+void QCR::combine(std::vector<std::vector<int>> &words, std::vector<int> &word)
+{
+    if (words.empty())
+        return;
+    // 按left坐标从左到右排序
+    std::sort(words.begin(), words.end(),
+        [=](auto w1, auto w2) { return w1[1] < w2[1]; });
+    // 合并数字
+    int nums = 0;
+    for (auto &w : words)
+        nums = nums * 10 + w[5];
+    // 计算整体的坐标和宽高
+    int l = (*std::min_element(words.begin(), words.end(),
+        [=](auto w1, auto w2) { return w1[1] < w2[1]; }))[1];
+    int r = (*std::max_element(words.begin(), words.end(),
+        [=](auto w1, auto w2) { return w1[2] < w2[2]; }))[2];
+    int t = (*std::min_element(words.begin(), words.end(),
+        [=](auto w1, auto w2) { return w1[3] < w2[3]; }))[3];
+    int b = (*std::max_element(words.begin(), words.end(),
+        [=](auto w1, auto w2) { return w1[4] < w2[4]; }))[4];
+    word = { words[0][0], l, r, t, b, nums };
+}
+
+void QCR::spliceWords(std::vector<std::vector<std::vector<int>>> &words)
+{
+    if (words.empty())
+        return;
+    for (int i = 0; i < words.size(); ++i)
+    {
+        if (words[i].empty())
+            continue;
+        std::vector<std::vector<int>> words_col = words[i];
+        // 按top坐标从上到下排序
+        std::sort(words_col.begin(), words_col.end(),
+            [=](auto w1, auto w2) { return w1[3] < w2[3]; });
+
+        std::vector<std::vector<int>> words_row = { words_col.front() };
+        size_t j = 0;
+        while (j < words_col.size() - 1)
+        {
+            // height = bottom - top
+            int h_min = std::min(words_col[j][4] - words_col[j][3], words_col[j + 1][4] - words_col[j + 1][3]);
+            int h_inc = words_col[j][4] - words_col[j + 1][3];
+            // 竖直相交高度超过较小高度的1/3则认为是同一行的字符
+            if (3 * h_inc > h_min)
+            {
+                words_row.push_back(words_col[j + 1]);
+                words_col.erase(words_col.begin() + j);
+                continue;
+            }
+            else
+            {
+                std::vector<int> line;
+                combine(words_row, line);
+                words_col[j] = line;
+
+                words_row.clear();
+                words_row.push_back(words_col[j + 1]);
+            }
+            ++j;
+        }
+        std::vector<int> line;
+        combine(words_row, line);
+        words_col.pop_back();
+        words_col.push_back(line);
+
+        words[i] = words_col;
+    }
+}
+
+void QCR::fusion(std::vector<std::vector<std::vector<int>>> &words)
+{
+    for (auto &words_col : words)
+    {
+        for (auto &w : words_col)
+        {
+            for (int i = 0; i < ui.ui_table_widget->rowCount(); ++i)
+            {
+                int _c = w[0];
+                std::string srow = std::to_string(i);
+                std::string scol = std::to_string(_c);
+                if (!ocr_result.contains(srow) || !ocr_result.at(srow).contains(scol))
+                    continue;
+                auto &rect = ocr_result.at(srow).at(scol).at("polygon");
+                int t = (*std::min_element(rect.begin(), rect.end(),
+                    [=](auto p1, auto p2) { return p1.at(1) < p2.at(1); })).at(1);
+                int b = (*std::max_element(rect.begin(), rect.end(),
+                    [=](auto p1, auto p2) { return p1.at(1) < p2.at(1); })).at(1);
+                // 不相交
+                if (b < w[3])
+                {
+                    continue;
+                }
+                // 从上往下第一个相交的格子即对应的格子
+                else
+                {
+                    std::string _text = ocr_result.at(srow).at(scol).at("text");
+                    QString text = QString::fromUtf8(_text.c_str());
+
+                    int has_oth = text.contains(QRegularExpression(u8"[一-龥a-zA-Z]+"));
+                    int has_num = text.contains(QRegularExpression(u8"[0-9]+"));
+
+                    // 有两个数字, 认为原数据是准确的不需要替换
+                    if (has_num && !has_oth && text.size() == 2)
+                        ;
+                    // 原数据为"100"不替换
+                    else if (has_num && !has_oth && text.size() == 3 && text == QString::fromUtf8(u8"100"))
+                        ;
+                    // 否则都替换为识别后的数字
+                    else
+                        ocr_result.at(srow).at(scol).at("text") = std::to_string(w[5]);
+                    break;
+                }
+            }
+        }
+    }
+}
+
+void QCR::optimize()
+{
+    std::vector<std::vector<int>> rects;
+    // 获取
+    getScoreColumn(rects);
+
+    // 预览获取到的范围
+    QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
+    cv::Mat img = cv::imread(path.toLocal8Bit().data());
+    for (auto rect : rects)
+    {
+        cv::rectangle(img, cv::Point(rect[1], rect[3]), cv::Point(rect[2], rect[4]), cv::Scalar(0, 255, 255));
+    }
+
+    // 根据获取到的范围切割图片并存储到本地备用
+    cropScoreColumn(rects);
+    // 从切割的图片中提取字符并识别
+    std::vector<std::vector<std::vector<int>>> words;
+    extractWords(words);
+    // 拼接识别到的数字
+    spliceWords(words);
+    // 数据融合
+    fusion(words);
+    // 将数据更新到界面
+    updateTable();
 }
 
 void QCR::calAveSd(const std::vector<double> &vec, double &ave, double &sd)

@@ -71,6 +71,9 @@
     <ClInclude Include="include\bd_ocr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\digits_classify.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\about_dialog.cpp">
@@ -104,6 +107,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\bd_ocr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\digits_classify.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
