@@ -7,6 +7,7 @@
         <file>images/act_ocr.svg</file>
         <file>images/act_open.svg</file>
         <file>images/logo.png</file>
+        <file>images/act_optimize.svg</file>
         <file>images/act_undo.svg</file>
     </qresource>
 </RCC>
