@@ -147,7 +147,9 @@ void QCR::openImage()
                 img_path_cropped.clear();
                 file.copy(img_path);
                 printLog(QString::fromUtf8(u8"已创建副本: ") + img_path);
-                resizeImage(img_path);
+                int len = config_dialog.ui.spin_img_length->value();
+                int sz = config_dialog.ui.spin_img_size->value();
+                resizeImage(img_path, len, sz);
             });
         compress_thread->start();
 
@@ -170,9 +172,6 @@ void QCR::runOcr()
         [&]() {
             if (compress_thread->isRunning())
                 compress_thread->wait();
-
-            // 由于API限制, 压缩图片, 避免图片过大无法识别
-            resizeImage(path);
 
             std::string base64_img;
             image2base64(path.toLocal8Bit().data(), base64_img);
@@ -538,6 +537,7 @@ void QCR::getVertexes(std::vector<cv::Vec4i> &lines, std::vector<cv::Point> &poi
 
 void QCR::resizeImage(const QString &path, int len, int sz)
 {
+    sz *= 1024 * 1024; // MB to Byte
     cv::Mat img = cv::imread(path.toLocal8Bit().data());
     double scale = 1.0;
     // 缩小宽高超过 len 像素的图片以加快处理速度
