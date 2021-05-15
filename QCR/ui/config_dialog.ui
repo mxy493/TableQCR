@@ -165,6 +165,9 @@
         </item>
         <item row="2" column="0">
          <widget class="QLabel" name="label_7">
+          <property name="toolTip">
+           <string>请确保矫正图片后再使用优化功能，否则优化后可能效果更差！</string>
+          </property>
           <property name="text">
            <string>识别后自动优化</string>
           </property>

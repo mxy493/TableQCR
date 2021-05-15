@@ -1,4 +1,4 @@
-﻿#include <QFileDialog>
+#include <QFileDialog>
 #include <QTextStream>
 #include <QDateTime>
 #include <QIODevice>
@@ -28,6 +28,7 @@ QCR::QCR(QWidget *parent)
     undo_action = new QAction(QIcon(":/images/act_undo.svg"), QString::fromUtf8(u8"恢复"));
     ocr_action = new QAction(QIcon(":/images/act_ocr.svg"), QString::fromUtf8(u8"识别"));
     optimize_action = new QAction(QIcon(":/images/act_optimize.svg"), QString::fromUtf8(u8"优化"));
+    optimize_action->setToolTip(QString::fromUtf8(u8"请确保在图片已校正的前提下使用优化功能, 否则可能导致效果更差!"));
     export_action = new QAction(QIcon(":/images/act_export.svg"), QString::fromUtf8(u8"导出"));
     config_action = new QAction(QIcon(":/images/act_config.svg"), QString::fromUtf8(u8"设置"));
     about_action = new QAction(QIcon(":/images/act_about.svg"), QString::fromUtf8(u8"关于"));
