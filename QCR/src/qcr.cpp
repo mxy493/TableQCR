@@ -613,7 +613,7 @@ void QCR::edgeDetection()
 
     // 边缘检测
     cv::Mat canny;
-    Canny(blured, canny, 0.5 * otsu_thresh_val, otsu_thresh_val);
+    Canny(blured, canny, 0.5 * otsu_thresh_val, otsu_thresh_val, 3, true);
     // 如果表格外围没有更多文字或其他干扰因素, 加上以下两行应该可以获得更好的轮廓
     //cv::dilate(canny, canny, cv::Mat());
     //Canny(canny, canny, 50, 150);
@@ -681,8 +681,6 @@ void QCR::processImage()
 
     // 均值滤波
     cv::Mat blured;
-    //blur(proc, b1, cv::Size(3, 3));
-    //GaussianBlur(proc, b2, cv::Size(3, 3), 0);
     cv::bilateralFilter(gray, blured, 7, 75, 75);
 
     // 自适应均衡化，提高对比度，裁剪效果更好
@@ -690,9 +688,11 @@ void QCR::processImage()
     cv::Ptr<cv::CLAHE> clahe = createCLAHE(1, cv::Size(10, 10));
     clahe->apply(blured, proc);
 
-    // 阈值化，转化为黑白图片
+    // 自适应阈值，转化为黑白图片
     adaptiveThreshold(proc, proc, 255,
-        CV_ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY_INV, 15, 10);
+        CV_ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, 7, 3);
+
+    return;
 
     // 形态学, 保留较长的横竖线条
     // 黑底白字, 腐蚀掉白字
@@ -1100,7 +1100,7 @@ void QCR::extractWords(std::vector<std::vector<std::vector<int>>> &words)
         // 阈值化，转化为黑白图片
         cv::Mat img1;
         adaptiveThreshold(proc, img1, 255,
-            CV_ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY_INV, 15, 10);
+            CV_ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, 15, 10);
 
         // 形态学, 保留较长的横竖线条
         // 黑底白字, 腐蚀掉白字
@@ -1344,6 +1344,9 @@ void QCR::optimize()
     // 从切割的图片中提取字符并识别
     std::vector<std::vector<std::vector<int>>> words;
     extractWords(words);
+
+    return;
+
     // 拼接识别到的数字
     spliceWords(words);
     // 数据融合
