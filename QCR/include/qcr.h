@@ -56,6 +56,7 @@ public:
 
 public slots:
     void openImage();
+    void rotateImage();
     void interceptImage();
     void undo();
     void runOcr();
@@ -69,7 +70,6 @@ private:
     Ui::QCRClass ui;
 
     QThread *initial_thread;
-    QThread *compress_thread;
     QThread *detect_table_thread;
 
     ConfigDialog config_dialog;  // 设置对话框
@@ -77,6 +77,7 @@ private:
     LoadingAnimation animation;  // 加载动画
 
     QAction *open_action;    // 打开按钮
+    QAction *rotate_action;  //打开按钮
     QAction *crop_action;    // 裁剪按钮
     QAction *undo_action;    // 恢复按钮
     QAction *ocr_action;     // 识别按钮
