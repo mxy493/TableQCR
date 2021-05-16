@@ -51,6 +51,30 @@ void ImageWidget::setPix(QPixmap pix)
     this->update();
 }
 
+QPixmap ImageWidget::getPix()
+{
+    return src_pix;
+}
+
+void ImageWidget::rotateImage()
+{
+    // 旋转图片
+    QTransform trans;
+    trans.rotate(90);
+    this->src_pix = this->src_pix.transformed(trans);
+
+    // 旋转截取框
+    QPointF tmp = intercept_rel[3];
+    for (int i = 3; i > 0; --i)
+        intercept_rel[i] = intercept_rel[i - 1];
+    intercept_rel[0] = tmp;
+    for (int i = 0; i < 4; ++i)
+        intercept_rel[i] = QPointF(1.0 - intercept_rel[i].y(), intercept_rel[i].x());
+    rel2abs();
+
+    this->update();
+}
+
 void ImageWidget::inVertex(const QPoint &pos)
 {
     for (int i = 0; i < intercept_abs.size(); ++i)

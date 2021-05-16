@@ -9,5 +9,6 @@
         <file>images/logo.png</file>
         <file>images/act_optimize.svg</file>
         <file>images/act_undo.svg</file>
+        <file>images/act_rotate.svg</file>
     </qresource>
 </RCC>

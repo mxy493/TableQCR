@@ -16,6 +16,8 @@ public:
     ~ImageWidget();
 
     void setPix(QPixmap pix);
+    QPixmap getPix();   // 获取src_pix
+    void rotateImage();
     void inVertex(const QPoint &pos);
     void getVertex(std::vector<std::vector<double>> &points);
     void abs2rel();

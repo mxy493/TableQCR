@@ -24,7 +24,8 @@ QCR::QCR(QWidget *parent)
     ui.central_widget->setLayout(ui.hbox);
     setCentralWidget(ui.central_widget);
 
-    open_action = new QAction(QIcon(":/images/act_open.svg"), QString::fromUtf8(u8"打开"));
+    open_action = new QAction(QIcon(":/images/act_open.svg"), QString::fromUtf8(u8"打开"));    
+    rotate_action = new QAction(QIcon(":/images/act_rotate.svg"), QString::fromUtf8(u8"旋转"));
     crop_action = new QAction(QIcon(":/images/act_crop.svg"), QString::fromUtf8(u8"校正"));
     undo_action = new QAction(QIcon(":/images/act_undo.svg"), QString::fromUtf8(u8"恢复"));
     ocr_action = new QAction(QIcon(":/images/act_ocr.svg"), QString::fromUtf8(u8"识别"));
@@ -35,6 +36,7 @@ QCR::QCR(QWidget *parent)
     about_action = new QAction(QIcon(":/images/act_about.svg"), QString::fromUtf8(u8"关于"));
 
     ui.toolbar->addAction(open_action);
+    ui.toolbar->addAction(rotate_action);
     ui.toolbar->addAction(crop_action);
     ui.toolbar->addAction(undo_action);
     ui.toolbar->addAction(ocr_action);
@@ -43,14 +45,15 @@ QCR::QCR(QWidget *parent)
     ui.toolbar->addAction(config_action);
     ui.toolbar->addAction(about_action);
 
-    connect(open_action, SIGNAL(triggered()), this, SLOT(openImage()));
+    connect(open_action, &QAction::triggered, this, &QCR::openImage);
+    connect(rotate_action, &QAction::triggered, this, &QCR::rotateImage);
     connect(crop_action, &QAction::triggered, this, &QCR::interceptImage);
     connect(undo_action, &QAction::triggered, this, &QCR::undo);
     connect(ocr_action, &QAction::triggered, this, &QCR::runOcr);
     connect(optimize_action, &QAction::triggered, this, &QCR::optimize);
-    connect(export_action, SIGNAL(triggered()), this, SLOT(exportTableData()));
+    connect(export_action, &QAction::triggered, this, &QCR::exportTableData);
     connect(config_action, &QAction::triggered, &config_dialog, &ConfigDialog::exec);
-    connect(about_action, SIGNAL(triggered()), &about_dlg, SLOT(show()));
+    connect(about_action, &QAction::triggered, &about_dlg, &QDialog::show);
 
     // 测试按钮
     test1_action = new QAction(QIcon(":/images/logo.png"), QString::fromUtf8(u8"测试"));
@@ -130,33 +133,35 @@ void QCR::openImage()
     printLog(QString::fromUtf8(u8"Original: ") + path);
     if (!path.isEmpty())
     {
+        // 创建 tmp 文件夹
+        QDir dir;
+        if (!dir.exists("./tmp"))
+            dir.mkdir("tmp");
+
+        // 复制并压缩图片
+        QFile file(path);
+        img_path = QString::fromUtf8(u8"./tmp/qcr_%1.jpg").arg(getCurTimeString());
+        img_path_cropped.clear();
+        file.copy(img_path);
+        printLog(QString::fromUtf8(u8"已创建副本: ") + img_path);
+        int len = config_dialog.ui.spin_img_length->value();
+        int sz = config_dialog.ui.spin_img_size->value();
+        resizeImage(img_path, len, sz);
+
         resetTable();
         ui.ui_img_widget->setPix(QPixmap(path));
-        QApplication::processEvents();
-
-        compress_thread = QThread::create(
-            [=]() {
-                // 创建 tmp 文件夹
-                QDir dir;
-                if (!dir.exists("./tmp"))
-                {
-                    dir.mkdir("tmp");
-                }
-
-                // 复制并压缩图片
-                QFile file(path);
-                img_path = QString::fromUtf8(u8"./tmp/qcr_%1.jpg").arg(getCurTimeString());
-                img_path_cropped.clear();
-                file.copy(img_path);
-                printLog(QString::fromUtf8(u8"已创建副本: ") + img_path);
-                int len = config_dialog.ui.spin_img_length->value();
-                int sz = config_dialog.ui.spin_img_size->value();
-                resizeImage(img_path, len, sz);
-            });
-        compress_thread->start();
 
         edgeDetection();
     }
+}
+
+void QCR::rotateImage()
+{
+    ui.ui_img_widget->rotateImage();
+    QPixmap pix = ui.ui_img_widget->getPix();
+
+    QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
+    pix.save(path);
 }
 
 void QCR::runOcr()
@@ -172,9 +177,6 @@ void QCR::runOcr()
 
     QThread *ocr_thread = QThread::create(
         [&]() {
-            if (compress_thread->isRunning())
-                compress_thread->wait();
-
             std::string base64_img;
             image2base64(path.toLocal8Bit().data(), base64_img);
 
@@ -577,9 +579,6 @@ void QCR::resizeImage(const QString &path, int len, int sz)
 
 void QCR::edgeDetection()
 {
-    if (compress_thread->isRunning())
-        compress_thread->wait();
-
     QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
     cv::Mat img = cv::imread(path.toLocal8Bit().data());
 
