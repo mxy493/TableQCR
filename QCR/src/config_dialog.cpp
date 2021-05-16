@@ -60,6 +60,8 @@ void ConfigDialog::loadConfig()
                     ui.spin_img_length->setValue(value.toInt());
                 else if (key == QString::fromUtf8(u8"img_size"))
                     ui.spin_img_size->setValue(value.toInt());
+                else if (key == QString::fromUtf8(u8"auto_edge_detection"))
+                    ui.check_auto_edge_detection->setChecked(value == QString::fromUtf8(u8"true"));
                 else if (key == QString::fromUtf8(u8"auto_optimize"))
                     ui.check_auto_optimize->setChecked(value == QString::fromUtf8(u8"true"));
 
@@ -92,6 +94,7 @@ void ConfigDialog::updateConfig()
     QString service_provider = ui.combo_service_provider->currentText();
     QString img_length = QString::number(ui.spin_img_length->value());
     QString img_size = QString::number(ui.spin_img_size->value());
+    QString auto_edge_detection = ui.check_auto_edge_detection->isChecked() ? "true" : "false";
     QString auto_optimize = ui.check_auto_optimize->isChecked() ? "true" : "false";
 
     QString bd_get_token_url = ui.line_bd_get_token_url->text();
@@ -122,6 +125,7 @@ void ConfigDialog::updateConfig()
         out << "service_provider=" << service_provider << "\n";
         out << "img_length=" << img_length << "\n";
         out << "img_size=" << img_size << "\n";
+        out << "auto_edge_detection=" << auto_edge_detection << "\n";
         out << "auto_optimize=" << auto_optimize << "\n";
 
         out << "[bd]\n";
