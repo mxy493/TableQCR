@@ -2,6 +2,7 @@
 #include <QTextStream>
 #include <QDateTime>
 #include <QIODevice>
+#include <QStandardPaths>
 
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/imgproc.hpp"
@@ -249,17 +250,11 @@ void QCR::runBdOcr(const std::string &base64_img)
 
 void QCR::exportTableData()
 {
-    // 创建 output 文件夹
-    QDir dir;
-    if (!dir.exists("./output"))
-    {
-        dir.mkdir("output");
-    }
     // 打开保存文件对话框
-    QString file_name = QString::fromUtf8("QCR_%1.csv").arg(getCurTimeString());
+    QString file_name = QString::fromUtf8("qcr_%1.csv").arg(getCurTimeString());
     QString file_path = QFileDialog::getSaveFileName(
         this, QString::fromUtf8(u8"导出数据"),
-        QString::fromUtf8(u8"./output/") + file_name,
+        QStandardPaths::writableLocation(QStandardPaths::DesktopLocation) + QString("/") + file_name,
         QString::fromUtf8(u8"表格 (*.csv)"));
     if (!file_path.isEmpty())
     {
@@ -285,7 +280,8 @@ void QCR::exportTableData()
             }
             file.close();  // 关闭文件，否则数据无法保存
             MyMessageBox msg(QMessageBox::Information, QString::fromUtf8(u8"保存成功"),
-                QString::fromUtf8(u8"数据已导出到文件 ") + file_path);
+                QString::fromUtf8(u8"数据已导出到文件:\n") + file_path);
+            QTimer::singleShot(3000, &msg, &QMessageBox::accept);
             msg.exec();
         }
     }
