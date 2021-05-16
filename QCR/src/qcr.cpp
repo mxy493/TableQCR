@@ -151,7 +151,8 @@ void QCR::openImage()
         resetTable();
         ui.ui_img_widget->setPix(QPixmap(path));
 
-        edgeDetection();
+        if (config_dialog.ui.check_auto_edge_detection->isChecked())
+            edgeDetection();
     }
 }
 

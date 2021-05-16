@@ -160,10 +160,7 @@
           </item>
          </widget>
         </item>
-        <item row="2" column="1">
-         <widget class="QCheckBox" name="check_auto_optimize"/>
-        </item>
-        <item row="2" column="0">
+        <item row="2" column="2">
          <widget class="QLabel" name="label_7">
           <property name="toolTip">
            <string>请确保矫正图片后再使用优化功能，否则优化后可能效果更差！</string>
@@ -172,6 +169,19 @@
            <string>识别后自动优化</string>
           </property>
          </widget>
+        </item>
+        <item row="2" column="3">
+         <widget class="QCheckBox" name="check_auto_optimize"/>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label_9">
+          <property name="text">
+           <string>打开图片时识别表格轮廓</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QCheckBox" name="check_auto_edge_detection"/>
         </item>
        </layout>
       </widget>
