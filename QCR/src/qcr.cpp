@@ -127,8 +127,8 @@ void QCR::getBdAccessToken()
 
 void QCR::openImage()
 {
-    QString path = QFileDialog::getOpenFileName(this,
-        QString::fromUtf8(u8"打开图片"), QString::fromUtf8(u8"."),
+    QString path = QFileDialog::getOpenFileName(this, QString::fromUtf8(u8"打开图片"),
+        QStandardPaths::writableLocation(QStandardPaths::DesktopLocation),
         QString::fromUtf8(u8"图片 (*.png *.bmp *.jpg *.tiff);;所有文件 (*.*)"));
     printLog(QString::fromUtf8(u8"Original: ") + path);
     if (!path.isEmpty())
