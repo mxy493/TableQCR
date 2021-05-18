@@ -58,7 +58,7 @@ public slots:
     void openImage();
     void rotateImage();
     void interceptImage();
-    void undo();
+    void restore();
     void runOcr();
     void runTxOcr(const std::string &base64_img);
     void runBdOcr(const std::string &base64_img);
@@ -76,15 +76,15 @@ private:
     AboutDialog about_dlg;       // 关于对话框
     LoadingAnimation animation;  // 加载动画
 
-    QAction *open_action;    // 打开按钮
-    QAction *rotate_action;  //打开按钮
-    QAction *crop_action;    // 裁剪按钮
-    QAction *undo_action;    // 恢复按钮
-    QAction *ocr_action;     // 识别按钮
-    QAction *optimize_action;// 识别按钮
-    QAction *export_action;  // 导出按钮
-    QAction *config_action;  // 设置按钮
-    QAction *about_action;   // 关于按钮
+    QAction *act_open;    // 打开按钮
+    QAction *act_rotate;  //打开按钮
+    QAction *act_crop;    // 裁剪按钮
+    QAction *act_restore;    // 恢复按钮
+    QAction *act_ocr;     // 识别按钮
+    QAction *act_optimize;// 识别按钮
+    QAction *act_export;  // 导出按钮
+    QAction *act_config;  // 设置按钮
+    QAction *act_about;   // 关于按钮
 
     QAction *test1_action;   // 测试1
 

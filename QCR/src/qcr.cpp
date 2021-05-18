@@ -24,36 +24,36 @@ QCR::QCR(QWidget *parent)
     ui.central_widget->setLayout(ui.hbox);
     setCentralWidget(ui.central_widget);
 
-    open_action = new QAction(QIcon(":/images/act_open.svg"), QString::fromUtf8(u8"打开"));    
-    rotate_action = new QAction(QIcon(":/images/act_rotate.svg"), QString::fromUtf8(u8"旋转"));
-    crop_action = new QAction(QIcon(":/images/act_crop.svg"), QString::fromUtf8(u8"校正"));
-    undo_action = new QAction(QIcon(":/images/act_undo.svg"), QString::fromUtf8(u8"恢复"));
-    ocr_action = new QAction(QIcon(":/images/act_ocr.svg"), QString::fromUtf8(u8"识别"));
-    optimize_action = new QAction(QIcon(":/images/act_optimize.svg"), QString::fromUtf8(u8"优化"));
-    optimize_action->setToolTip(QString::fromUtf8(u8"请确保在图片已校正的前提下使用优化功能, 否则可能导致效果更差!"));
-    export_action = new QAction(QIcon(":/images/act_export.svg"), QString::fromUtf8(u8"导出"));
-    config_action = new QAction(QIcon(":/images/act_config.svg"), QString::fromUtf8(u8"设置"));
-    about_action = new QAction(QIcon(":/images/act_about.svg"), QString::fromUtf8(u8"关于"));
+    act_open = new QAction(QIcon(":/images/act_open.svg"), QString::fromUtf8(u8"打开"));    
+    act_rotate = new QAction(QIcon(":/images/act_rotate.svg"), QString::fromUtf8(u8"旋转"));
+    act_crop = new QAction(QIcon(":/images/act_crop.svg"), QString::fromUtf8(u8"校正"));
+    act_restore = new QAction(QIcon(":/images/act_undo.svg"), QString::fromUtf8(u8"恢复"));
+    act_ocr = new QAction(QIcon(":/images/act_ocr.svg"), QString::fromUtf8(u8"识别"));
+    act_optimize = new QAction(QIcon(":/images/act_optimize.svg"), QString::fromUtf8(u8"优化"));
+    act_optimize->setToolTip(QString::fromUtf8(u8"请确保在图片已校正的前提下使用优化功能, 否则可能导致效果更差!"));
+    act_export = new QAction(QIcon(":/images/act_export.svg"), QString::fromUtf8(u8"导出"));
+    act_config = new QAction(QIcon(":/images/act_config.svg"), QString::fromUtf8(u8"设置"));
+    act_about = new QAction(QIcon(":/images/act_about.svg"), QString::fromUtf8(u8"关于"));
 
-    ui.toolbar->addAction(open_action);
-    ui.toolbar->addAction(rotate_action);
-    ui.toolbar->addAction(crop_action);
-    ui.toolbar->addAction(undo_action);
-    ui.toolbar->addAction(ocr_action);
-    ui.toolbar->addAction(optimize_action);
-    ui.toolbar->addAction(export_action);
-    ui.toolbar->addAction(config_action);
-    ui.toolbar->addAction(about_action);
+    ui.toolbar->addAction(act_open);
+    ui.toolbar->addAction(act_rotate);
+    ui.toolbar->addAction(act_crop);
+    ui.toolbar->addAction(act_restore);
+    ui.toolbar->addAction(act_ocr);
+    ui.toolbar->addAction(act_optimize);
+    ui.toolbar->addAction(act_export);
+    ui.toolbar->addAction(act_config);
+    ui.toolbar->addAction(act_about);
 
-    connect(open_action, &QAction::triggered, this, &QCR::openImage);
-    connect(rotate_action, &QAction::triggered, this, &QCR::rotateImage);
-    connect(crop_action, &QAction::triggered, this, &QCR::interceptImage);
-    connect(undo_action, &QAction::triggered, this, &QCR::undo);
-    connect(ocr_action, &QAction::triggered, this, &QCR::runOcr);
-    connect(optimize_action, &QAction::triggered, this, &QCR::optimize);
-    connect(export_action, &QAction::triggered, this, &QCR::exportTableData);
-    connect(config_action, &QAction::triggered, &config_dialog, &ConfigDialog::exec);
-    connect(about_action, &QAction::triggered, &about_dlg, &QDialog::show);
+    connect(act_open, &QAction::triggered, this, &QCR::openImage);
+    connect(act_rotate, &QAction::triggered, this, &QCR::rotateImage);
+    connect(act_crop, &QAction::triggered, this, &QCR::interceptImage);
+    connect(act_restore, &QAction::triggered, this, &QCR::restore);
+    connect(act_ocr, &QAction::triggered, this, &QCR::runOcr);
+    connect(act_optimize, &QAction::triggered, this, &QCR::optimize);
+    connect(act_export, &QAction::triggered, this, &QCR::exportTableData);
+    connect(act_config, &QAction::triggered, &config_dialog, &ConfigDialog::exec);
+    connect(act_about, &QAction::triggered, &about_dlg, &QDialog::show);
 
     // 测试按钮
     test1_action = new QAction(QIcon(":/images/logo.png"), QString::fromUtf8(u8"测试"));
@@ -1421,7 +1421,7 @@ void QCR::interceptImage()
     ui.ui_img_widget->setPix(QPixmap(img_path_cropped));
 }
 
-void QCR::undo()
+void QCR::restore()
 {
     QFile file(img_path_cropped);
     if (file.exists())
