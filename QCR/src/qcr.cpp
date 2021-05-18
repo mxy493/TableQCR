@@ -1136,18 +1136,25 @@ void QCR::extractWords(std::vector<std::vector<std::vector<int>>> &words)
         cv::Mat tmp = img.clone();
         for (auto &contour : contours)
         {
+            cv::Rect rect = cv::boundingRect(contour);
+            // 如果超过宽度超过高度的2倍认为不是数字
+            if (rect.height < 10 || rect.height > 50 ||
+                rect.width < 5 || rect.width > 50 ||
+                rect.width > 2 * rect.height)
+                continue;
+
             cv::RotatedRect min_rect = cv::minAreaRect(contour);
             printLog(QString("Angle: %1").arg(min_rect.angle));
             
             // 稍微扩大一点范围
-            cv::Size sz = min_rect.size;
-            sz.width += 2;
-            sz.height += 2;
-            cv::RotatedRect rect(min_rect.center, sz, min_rect.angle);
+            cv::Size2f sz = min_rect.size;
+            sz.width += 4;
+            sz.height += 4;
+            cv::RotatedRect r_rect(min_rect.center, sz, min_rect.angle);
             
             // The points array for storing rectangle vertices. The order is bottomLeft, topLeft, topRight, bottomRight.
             cv::Point2f points[4];
-            rect.points(points);
+            r_rect.points(points);
 
             std::vector<double> xs;
             std::vector<double> ys;
@@ -1161,19 +1168,12 @@ void QCR::extractWords(std::vector<std::vector<std::vector<int>>> &words)
             double t = *std::min_element(ys.begin(), ys.end());
             double b = *std::max_element(ys.begin(), ys.end());
 
-            double w = r - l;
-            double h = b - t;
-
-            // 数字基本不存在高度小于宽度的情况, 如果超过宽度超过高度的2倍认为不是数字
-            if (h < 10 || h > 50 || w < 5 || w > 50 || w > 2 * h)
-                continue;
-
             // 变换后的顶点
             cv::Point2f pts_std[4];
-            pts_std[0] = cv::Point2f(0., 0.);
-            pts_std[1] = cv::Point2f(rect.size.width, 0.);
-            pts_std[2] = cv::Point2f(rect.size.width, rect.size.height);
-            pts_std[3] = cv::Point2f(0., rect.size.height);
+            pts_std[0] = cv::Point2f(0., r_rect.size.height);
+            pts_std[1] = cv::Point2f(0., 0.);
+            pts_std[2] = cv::Point2f(r_rect.size.width, 0.);
+            pts_std[3] = cv::Point2f(r_rect.size.width, r_rect.size.height);
 
             // 转换回去
             cv::Point2f pts_rev[4];
@@ -1187,8 +1187,9 @@ void QCR::extractWords(std::vector<std::vector<std::vector<int>>> &words)
             cv::Mat forward = cv::getPerspectiveTransform(points, pts_std);
             cv::Mat reverse = cv::getPerspectiveTransform(pts_std, pts_rev);
             cv::Mat word;
-            cv::warpPerspective(no_border, word, forward, cv::Size(rect.size.width, rect.size.height));
-            cv::warpPerspective(word, word, reverse, cv::Size(w, h));
+            cv::warpPerspective(no_border, word, forward,
+                cv::Size(r_rect.size.width, r_rect.size.height));
+            cv::warpPerspective(word, word, reverse, cv::Size(r - l, b - t));
 
             // 拟合的矩形框
             for (int i = 0; i < 4; ++i)
