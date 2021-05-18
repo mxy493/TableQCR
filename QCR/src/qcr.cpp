@@ -1433,13 +1433,21 @@ void QCR::restore()
 {
     if (!img_path_cropped.isEmpty())
     {
-        // 删除文件夹
+        // 删除同名临时文件夹
         QFileInfo info(img_path_cropped);
         QDir dir(info.absolutePath() + QString("/") + info.baseName());
         if (dir.exists())
         {
             printLog(QString::fromUtf8(u8"删除文件夹: %1").arg(dir.absolutePath()));
             dir.removeRecursively();
+        }
+        // 删除base64编码后的文件
+        QString path_base64 = QString::fromUtf8(u8"./tmp/%1_base64.txt").arg(info.baseName());
+        QFile file_base64(path_base64);
+        if (file_base64.exists())
+        {
+            printLog(QString::fromUtf8(u8"删除文件: %1").arg(path_base64));
+            file_base64.remove();
         }
         // 删除裁剪后的图片并显示原图片
         QFile file(img_path_cropped);

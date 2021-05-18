@@ -66,7 +66,7 @@ void image2base64(const std::string &img_file, std::string &base64)
         dir.mkdir("tmp");
     }
     // 打开保存文件对话框
-    QString file_path = QString::fromUtf8(u8"./tmp/%1.txt").arg(info.baseName());
+    QString file_path = QString::fromUtf8(u8"./tmp/%1_base64.txt").arg(info.baseName());
     QFile file(file_path);
     if (file.open(QIODevice::WriteOnly))
     {
