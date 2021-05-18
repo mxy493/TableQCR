@@ -19,11 +19,11 @@ QString getCurTimeString();
 * 
 * @param log 要打印的log字符串
 */
-void printLog(const QString &log);
+void printLog(const QString &log, bool save=true);
 
-void printLog(const std::string &log);
+void printLog(const std::string &log, bool save = true);
 
-void printLog(const char *log);
+void printLog(const char *log, bool save = true);
 
 /*
 * @brief 将int64_t类型的unix时间戳转换为字符串

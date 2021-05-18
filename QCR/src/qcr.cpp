@@ -224,7 +224,7 @@ void QCR::runTxOcr(const std::string &base64_img)
 
     std::string response;
     txFormOcrRequest(response, tx_request_url, tx_secret_id, tx_secret_key, base64_img);
-    printLog(response);
+    printLog(response, false);
 
     txParseData(response);
 }
@@ -238,7 +238,7 @@ void QCR::runBdOcr(const std::string &base64_img)
 
     std::string request;
     bdFormOcrRequest(request, bd_request_url, bd_access_token, base64_img);
-    //printLog(request);
+    printLog(request, false);
 
     json req = json::parse(request);
     std::string request_id = req.at("result").at(0).at("request_id");
