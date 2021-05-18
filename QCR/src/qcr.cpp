@@ -28,6 +28,7 @@ QCR::QCR(QWidget *parent)
     act_rotate = new QAction(QIcon(":/images/act_rotate.svg"), QString::fromUtf8(u8"旋转"));
     act_crop = new QAction(QIcon(":/images/act_crop.svg"), QString::fromUtf8(u8"校正"));
     act_restore = new QAction(QIcon(":/images/act_undo.svg"), QString::fromUtf8(u8"恢复"));
+    act_restore->setEnabled(false); // 默认不可用, 点击"校正"按钮后可用
     act_ocr = new QAction(QIcon(":/images/act_ocr.svg"), QString::fromUtf8(u8"识别"));
     act_optimize = new QAction(QIcon(":/images/act_optimize.svg"), QString::fromUtf8(u8"优化"));
     act_optimize->setToolTip(QString::fromUtf8(u8"请确保在图片已校正的前提下使用优化功能, 否则可能导致效果更差!"));
@@ -1419,6 +1420,8 @@ void QCR::interceptImage()
     img_path_cropped = QString::fromUtf8(u8"./tmp/%1_cropped.%2").arg(info.baseName()).arg(info.suffix());
     cv::imwrite(img_path_cropped.toLocal8Bit().data(), dst_img);
     ui.ui_img_widget->setPix(QPixmap(img_path_cropped));
+
+    this->act_restore->setEnabled(true);
 }
 
 void QCR::restore()
@@ -1431,6 +1434,7 @@ void QCR::restore()
         img_path_cropped.clear();
         ui.ui_img_widget->setPix(QPixmap(img_path));
     }
+    this->act_restore->setEnabled(false);
 }
 
 void QCR::closeEvent(QCloseEvent *event)
