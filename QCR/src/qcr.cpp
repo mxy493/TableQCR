@@ -31,6 +31,7 @@ QCR::QCR(QWidget *parent)
     act_restore->setEnabled(false); // 默认不可用, 点击"校正"按钮后可用
     act_ocr = new QAction(QIcon(":/images/act_ocr.svg"), QString::fromUtf8(u8"识别"));
     act_optimize = new QAction(QIcon(":/images/act_optimize.svg"), QString::fromUtf8(u8"优化"));
+    act_optimize->setEnabled(false); // 识别后启用
     act_optimize->setToolTip(QString::fromUtf8(u8"请确保在图片已校正的前提下使用优化功能, 否则可能导致效果更差!"));
     act_export = new QAction(QIcon(":/images/act_export.svg"), QString::fromUtf8(u8"导出"));
     act_config = new QAction(QIcon(":/images/act_config.svg"), QString::fromUtf8(u8"设置"));
@@ -128,6 +129,8 @@ void QCR::getBdAccessToken()
 
 void QCR::openImage()
 {
+    this->act_optimize->setEnabled(false);
+
     QString path = QFileDialog::getOpenFileName(this, QString::fromUtf8(u8"打开图片"),
         QStandardPaths::writableLocation(QStandardPaths::DesktopLocation),
         QString::fromUtf8(u8"图片 (*.png *.bmp *.jpg *.tiff);;所有文件 (*.*)"));
@@ -203,6 +206,8 @@ void QCR::runOcr()
 
     // 将数据写入表格
     updateTable();
+
+    this->act_optimize->setEnabled(true);
 
     if (config_dialog.ui.check_auto_optimize->isChecked())
         optimize();
@@ -1426,15 +1431,29 @@ void QCR::interceptImage()
 
 void QCR::restore()
 {
-    QFile file(img_path_cropped);
-    if (file.exists())
+    if (!img_path_cropped.isEmpty())
     {
+        // 删除文件夹
+        QFileInfo info(img_path_cropped);
+        QDir dir(info.absolutePath() + QString("/") + info.baseName());
+        if (dir.exists())
+        {
+            printLog(QString::fromUtf8(u8"删除文件夹: %1").arg(dir.absolutePath()));
+            dir.removeRecursively();
+        }
         // 删除裁剪后的图片并显示原图片
-        file.remove();
-        img_path_cropped.clear();
-        ui.ui_img_widget->setPix(QPixmap(img_path));
+        QFile file(img_path_cropped);
+        if (file.exists())
+        {
+            printLog(QString::fromUtf8(u8"删除文件: %1").arg(img_path_cropped));
+            file.remove();
+            img_path_cropped.clear();
+            ui.ui_img_widget->setPix(QPixmap(img_path));
+        }
     }
     this->act_restore->setEnabled(false);
+    this->act_optimize->setEnabled(false);
+    resetTable();
 }
 
 void QCR::closeEvent(QCloseEvent *event)
