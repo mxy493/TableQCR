@@ -17,23 +17,38 @@ QString getCurTimeString()
     return now.toString(QString("yyyy-MM-dd_hh-mm-ss"));
 }
 
-void printLog(const QString &log)
+void printLog(const QString &log, bool save)
 {
     // 不添加空格, 不添加引号, 但末尾自动添加换行
     QDateTime now = QDateTime::currentDateTime();
     QString time = now.toString(QString("yyyy-MM-dd_hh-mm-ss-zzz"));
-    QString str = time + ": " + log;
-    qDebug().nospace().noquote() << str;
+    QString log_str = time + ": " + log;
+    qDebug().nospace().noquote() << log_str;
+
+    if (save)
+    {
+        if (!QDir("log").exists())
+            QDir().mkdir("log");
+        QFile file(QString("./log/") + now.toString(QString("yyyy-MM-dd")) + QString(".log"));
+        if (file.open(QIODevice::Append))
+        {
+            QTextStream out(&file);
+            out.setCodec("UTF-8");
+            out << log_str << "\n";
+            out.flush();
+            file.close();
+        }
+    }
 }
 
-void printLog(const std::string &log)
+void printLog(const std::string &log, bool save)
 {
-    printLog(QString::fromUtf8(log.c_str()));
+    printLog(QString::fromUtf8(log.c_str()), save);
 }
 
-void printLog(const char *log)
+void printLog(const char *log, bool save)
 {
-    printLog(QString(log));
+    printLog(QString(log), save);
 }
 
 std::string get_data(const int64_t &timestamp)
