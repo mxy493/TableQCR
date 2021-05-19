@@ -57,6 +57,8 @@ QCR::QCR(QWidget *parent)
     connect(act_config, &QAction::triggered, &config_dialog, &ConfigDialog::exec);
     connect(act_about, &QAction::triggered, &about_dlg, &QDialog::show);
 
+    connect(this, &QCR::msg_signal, this, &QCR::msg_box);
+
     // 测试按钮
     test1_action = new QAction(QIcon(":/images/logo.png"), QString::fromUtf8(u8"测试"));
     ui.toolbar->addAction(test1_action);
@@ -67,8 +69,6 @@ QCR::QCR(QWidget *parent)
         "QHeaderView::section{ background-color: whitesmoke }"
         "QTableWidget::item:selected{ color: black; background-color: lightcyan }");
 
-    init(model);
-
     // Putting the more time-consuming initialization work during program startup
     // into a separate thread.
     initial_thread = QThread::create(
@@ -76,7 +76,17 @@ QCR::QCR(QWidget *parent)
             config_dialog.loadConfig();
             getBdAccessToken();
         });
-    initial_thread->start();
+
+    if (!QDir("data").exists())
+    {
+        MyMessageBox msg(QString::fromUtf8(u8"初次使用, 请先在设置页面完善相关配置!"));
+        msg.exec();
+    }
+    else
+    {
+        init(model);
+        initial_thread->start();
+    }
 }
 
 void QCR::getBdAccessToken()
@@ -96,7 +106,7 @@ void QCR::getBdAccessToken()
     {
         // 删除data目录下所有token的文件
         QDir dir;
-        if (!QDir("data").exists())
+        if (!dir.exists("data"))
             dir.mkdir(QString("data"));
         dir.cd(QString("data"));
         QFileInfoList list = dir.entryInfoList(QStringList({ "bd_*.token" }), QDir::Files);
@@ -220,13 +230,16 @@ void QCR::runOcr()
     if (ocr_thread->isRunning())
         animation.start();
 
-    // 将数据写入表格
-    updateTable();
+    if (ocr_success)
+    {
+        // 将数据写入表格
+        updateTable();
 
-    this->act_optimize->setEnabled(true);
+        this->act_optimize->setEnabled(true);
 
-    if (config_dialog.ui.check_auto_optimize->isChecked())
-        optimize();
+        if (config_dialog.ui.check_auto_optimize->isChecked())
+            optimize();
+    }
 }
 
 void QCR::runTxOcr(const std::string &base64_img)
@@ -238,17 +251,26 @@ void QCR::runTxOcr(const std::string &base64_img)
     tmp = config_dialog.ui.line_tx_secret_key->text();
     std::string tx_secret_key = tmp.toStdString();
 
+    if (tx_request_url.empty() || tx_secret_id.empty() || tx_secret_key.empty())
+    {
+        ocr_success = false;
+        emit msg_signal(QString::fromUtf8(u8"缺少参数, 请在设置页面完善配置后使用!"));
+        return;
+    }
+
     std::string response;
     int ret = txFormOcrRequest(response, tx_request_url, tx_secret_id, tx_secret_key, base64_img);
     if (ret == 0)
     {
         printLog(response, false);
         txParseData(response);
+        ocr_success = true;
     }
     else
     {
+        ocr_success = false;
         printLog(QString::fromUtf8(u8"腾讯表格识别请求失败"));
-        MyMessageBox msg(QString::fromUtf8(u8"请求失败!"));
+        emit msg_signal(QString::fromUtf8(u8"请求失败!"));
         return;
     }
 }
@@ -259,6 +281,15 @@ void QCR::runBdOcr(const std::string &base64_img)
     std::string bd_request_url = tmp.toStdString();
     tmp = config_dialog.ui.line_bd_get_result_url->text();
     std::string bd_get_result_url = tmp.toStdString();
+
+    if (bd_access_token.empty())
+        getBdAccessToken();
+    if (bd_request_url.empty() || bd_get_result_url.empty() || bd_access_token.empty())
+    {
+        ocr_success = false;
+        emit msg_signal(QString::fromUtf8(u8"缺少参数, 请在设置页面完善配置后使用!"));
+        return;
+    }
 
     std::string request;
     int ret = bdFormOcrRequest(request, bd_request_url, bd_access_token, base64_img);
@@ -284,11 +315,13 @@ void QCR::runBdOcr(const std::string &base64_img)
             }
         }
         bdParseData(response);
+        ocr_success = true;
     }
     else
     {
+        ocr_success = false;
         printLog(QString::fromUtf8(u8"百度表格识别请求失败"));
-        MyMessageBox msg(QString::fromUtf8(u8"请求失败!"));
+        emit msg_signal(QString::fromUtf8(u8"请求失败!"));
         return;
     }
 }
@@ -402,6 +435,11 @@ void QCR::recognize()
     std::string det_name = "./tmp/" + info.baseName().toLocal8Bit() + "_DET.tiff";
     Utility::VisualizeBboxes(img, boxes, det_name);
     */
+}
+
+void QCR::msg_box(QString msg)
+{
+    MyMessageBox(msg).exec();
 }
 
 double getDistance(const cv::Vec4i &line, const cv::Point &point)
