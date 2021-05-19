@@ -54,6 +54,9 @@ public:
     void getVertexes(std::vector<cv::Vec4i> &lines, std::vector<cv::Point> &points);
     void closeEvent(QCloseEvent *event);
 
+signals:
+    void msg_signal(QString msg);
+
 public slots:
     void openImage();
     void rotateImage();
@@ -65,6 +68,7 @@ public slots:
     void optimize();
     void exportTableData();
     void recognize();
+    void msg_box(QString msg);
 
 private:
     Ui::QCRClass ui;
@@ -91,7 +95,8 @@ private:
     QString img_path;        // 图片路径
     QString img_path_cropped;  // 透视变换后的图片路径
 
-    std::string bd_access_token;
+    bool ocr_success; // 执行OCR识别是否成功
+    std::string bd_access_token; // 百度Access Token
 
     /*
     * 将数据统一格式化为
@@ -108,5 +113,5 @@ private:
     * 方便直接根据行列坐标定位某单元格的信息
     */
     json ocr_result = json::object();
-    const std::string model = "data/digits60000.weights";
+    const std::string model = "data/digits60000.weights"; // 数字识别模型
 };
