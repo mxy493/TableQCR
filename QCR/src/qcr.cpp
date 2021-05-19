@@ -1019,20 +1019,33 @@ void QCR::getScoreColumn(std::vector<std::vector<int>>& rects)
         return;
     // 从左到右排序
     std::sort(rects.begin(), rects.end(), [=](auto rc1, auto rc2) { return rc1[1] < rc2[1]; });
-    for (int i = 1; i < rects.size(); ++i)
+    for (size_t i = rects.size() - 1; i > 0; --i)
     {
-        if (rects[i - 1][2] - rects[i][1] >
-            std::min(rects[i - 1][2] - rects[i - 1][1], rects[i][2] - rects[i][1]) / 2)
+        // 20个像素作为可接受的误差
+        if (rects[i - 1][2] > rects[i][2] - 20)
         {
-            rects[i - 1][2] = std::max(rects[i - 1][2], rects[i][2]);
-            rects[i - 1][3] = std::min(rects[i - 1][3], rects[i][3]);
-            rects[i - 1][4] = std::max(rects[i - 1][4], rects[i][4]);
-            printLog(QString::fromUtf8(u8"合并%1,%2列: { %3, %4, %5, %6}")
-                .arg(rects[i - 1][0]).arg(rects[i][0])
-                .arg(rects[i - 1][1]).arg(rects[i - 1][2]).arg(rects[i - 1][3]).arg(rects[i - 1][4]));
-            rects.erase(rects.begin() + i);
-            --i;
+            rects[i - 1][2] = rects[i][1];
+            printLog(QString::fromUtf8(u8"修正%1列: %2, %3, %4, %5")
+                .arg(rects[i - 1][0]).arg(rects[i - 1][1]).arg(rects[i - 1][2])
+                .arg(rects[i - 1][3]).arg(rects[i - 1][4]));
         }
+    }
+    size_t j = 1;
+    while (j < rects.size())
+    {
+        if (2 * (rects[j - 1][2] - rects[j][1]) >
+            std::min(rects[j - 1][2] - rects[j - 1][1], rects[j][2] - rects[j][1]))
+        {
+            rects[j - 1][2] = std::max(rects[j - 1][2], rects[j][2]);
+            rects[j - 1][3] = std::min(rects[j - 1][3], rects[j][3]);
+            rects[j - 1][4] = std::max(rects[j - 1][4], rects[j][4]);
+            printLog(QString::fromUtf8(u8"合并%1,%2列: { %3, %4, %5, %6}")
+                .arg(rects[j - 1][0]).arg(rects[j][0])
+                .arg(rects[j - 1][1]).arg(rects[j - 1][2]).arg(rects[j - 1][3]).arg(rects[j - 1][4]));
+            rects.erase(rects.begin() + j);
+            continue;
+        }
+        ++j;
     }
 }
 
