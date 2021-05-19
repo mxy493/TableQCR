@@ -103,7 +103,6 @@ std::string get_authorization(const std::string &secret_id,
     string canonicalQueryString = "";
     string canonicalHeaders = "content-type:application/json\nhost:" + host + "\n";
     string signedHeaders = "content-type;host";
-    //string payload = "{\"Limit\": 1, \"Filters\": [{\"Values\": [\"\\u672a\\u547d\\u540d\"], \"Name\": \"instance-name\"}]}";
     string hashedRequestPayload = sha256Hex(payload);
     string canonicalRequest = httpRequestMethod + "\n" + canonicalUri + "\n"
         + canonicalQueryString + "\n" + canonicalHeaders + "\n"
@@ -164,6 +163,7 @@ int txFormOcrRequest(std::string &result, const std::string &request_url,
     curl = curl_easy_init();
     if (curl)
     {
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60); // 60s超时
         curl_easy_setopt(curl, CURLOPT_URL, request_url.data());
         curl_easy_setopt(curl, CURLOPT_POST, 1);
         // 添加表头信息
@@ -189,8 +189,8 @@ int txFormOcrRequest(std::string &result, const std::string &request_url,
         result_code = curl_easy_perform(curl);
         if (result_code != CURLE_OK)
         {
-            fprintf(stderr, "curl_easy_perform() failed: %s\n",
-                curl_easy_strerror(result_code));
+            printLog(QString("[tx] curl_easy_perform() failed: %1")
+                .arg(curl_easy_strerror(result_code)));
             is_success = 1;
             return is_success;
         }
@@ -199,7 +199,7 @@ int txFormOcrRequest(std::string &result, const std::string &request_url,
     }
     else
     {
-        fprintf(stderr, "curl_easy_init() failed.");
+        printLog("[tx] curl_easy_init() failed.");
         is_success = 1;
     }
     return is_success;

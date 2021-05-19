@@ -95,7 +95,10 @@ void QCR::getBdAccessToken()
     else
     {
         // 删除data目录下所有token的文件
-        QDir dir("data");
+        QDir dir;
+        if (!QDir("data").exists())
+            dir.mkdir(QString("data"));
+        dir.cd(QString("data"));
         QFileInfoList list = dir.entryInfoList(QStringList({ "bd_*.token" }), QDir::Files);
         for (auto &file : list)
         {
@@ -111,19 +114,32 @@ void QCR::getBdAccessToken()
         std::string bd_api_key = tmp.toStdString();
         tmp = config_dialog.ui.line_bd_secret_key->text();
         std::string bd_secret_key = tmp.toStdString();
-
-        std::string ret;
-        bdGetAccessToken(ret, bd_get_token_url, bd_api_key, bd_secret_key);
-        bd_access_token = json::parse(ret).at("access_token");
-
-        if (file.open(QIODevice::WriteOnly))
+        if (bd_get_token_url.empty() || bd_api_key.empty() || bd_secret_key.empty())
         {
-            QTextStream out(&file);
-            out << bd_access_token.c_str();
-            out.flush();
-            file.close();
+            printLog(QString::fromUtf8(u8"参数不足, 无法获取百度Access Token"));
+            return;
         }
-        printLog(QString::fromUtf8(u8"已获取到 Access Token 并写入到: ") + token_path);
+
+        std::string response;
+        int ret = bdGetAccessToken(response, bd_get_token_url, bd_api_key, bd_secret_key);
+        if (ret == 0)
+        {
+            bd_access_token = json::parse(response).at("access_token");
+
+            if (file.open(QIODevice::WriteOnly))
+            {
+                QTextStream out(&file);
+                out << bd_access_token.c_str();
+                out.flush();
+                file.close();
+            }
+            printLog(QString::fromUtf8(u8"已获取到 Access Token 并写入到: ") + token_path);
+        }
+        else
+        {
+            printLog(QString::fromUtf8(u8"获取百度token失败!"));
+            return;
+        }
     }
 }
 
@@ -223,10 +239,18 @@ void QCR::runTxOcr(const std::string &base64_img)
     std::string tx_secret_key = tmp.toStdString();
 
     std::string response;
-    txFormOcrRequest(response, tx_request_url, tx_secret_id, tx_secret_key, base64_img);
-    printLog(response, false);
-
-    txParseData(response);
+    int ret = txFormOcrRequest(response, tx_request_url, tx_secret_id, tx_secret_key, base64_img);
+    if (ret == 0)
+    {
+        printLog(response, false);
+        txParseData(response);
+    }
+    else
+    {
+        printLog(QString::fromUtf8(u8"腾讯表格识别请求失败"));
+        MyMessageBox msg(QString::fromUtf8(u8"请求失败!"));
+        return;
+    }
 }
 
 void QCR::runBdOcr(const std::string &base64_img)
@@ -237,24 +261,36 @@ void QCR::runBdOcr(const std::string &base64_img)
     std::string bd_get_result_url = tmp.toStdString();
 
     std::string request;
-    bdFormOcrRequest(request, bd_request_url, bd_access_token, base64_img);
-    printLog(request, false);
-
-    json req = json::parse(request);
-    std::string request_id = req.at("result").at(0).at("request_id");
-
-    std::string response;
-    while (true)
+    int ret = bdFormOcrRequest(request, bd_request_url, bd_access_token, base64_img);
+    if (ret == 0)
     {
-        // 百度QPS限制, 查询不能过于频繁
-        QThread::sleep(1);
-        bdGetResult(response, bd_get_result_url, bd_access_token, request_id, "json");
-        printLog(response);
-        json ocr_result = json::parse(response);
-        if (ocr_result.at("result").at("ret_code") == 3)
-            break;
+        printLog(request, false);
+
+        json req = json::parse(request);
+        std::string request_id = req.at("result").at(0).at("request_id");
+
+        std::string response;
+        while (true)
+        {
+            // 百度QPS限制, 查询不能过于频繁
+            QThread::sleep(1);
+            ret = bdGetResult(response, bd_get_result_url, bd_access_token, request_id, "json");
+            if (ret != 0)
+            {
+                printLog(response);
+                json ocr_result = json::parse(response);
+                if (ocr_result.at("result").at("ret_code") == 3)
+                    break;
+            }
+        }
+        bdParseData(response);
     }
-    bdParseData(response);
+    else
+    {
+        printLog(QString::fromUtf8(u8"百度表格识别请求失败"));
+        MyMessageBox msg(QString::fromUtf8(u8"请求失败!"));
+        return;
+    }
 }
 
 void QCR::exportTableData()
@@ -1152,7 +1188,7 @@ void QCR::extractWords(std::vector<std::vector<std::vector<int>>> &words)
 
         // 对应一张图片（一列）的结果
         std::vector<std::vector<int>> words_col;
-        cv::Mat tmp = img.clone();
+        //cv::Mat tmp = img.clone();
         for (auto &contour : contours)
         {
             cv::Rect rect = cv::boundingRect(contour);
@@ -1211,14 +1247,14 @@ void QCR::extractWords(std::vector<std::vector<std::vector<int>>> &words)
             cv::warpPerspective(word, word, reverse, cv::Size(r - l, b - t));
 
             // 拟合的矩形框
-            for (int i = 0; i < 4; ++i)
-                cv::line(tmp, points[i], points[(i + 1) % 4], cv::Scalar(0, 255, 255));
+            //for (int i = 0; i < 4; ++i)
+            //    cv::line(tmp, points[i], points[(i + 1) % 4], cv::Scalar(0, 255, 255));
 
             // 识别提取出的数字
             int number = predict(word);
             printLog(QString::fromUtf8(u8"Predict: %1").arg(number));
-            words_col.push_back({ _col, _left + static_cast<int>(l), _left + static_cast<int>(r),
-                _top + static_cast<int>(t), _top + static_cast<int>(b), number });
+            words_col.push_back({ _col, _left + rect.x, _left + rect.x + rect.width,
+                _top + rect.y, _top + rect.y + rect.height, number });
         }
         words.push_back(words_col);
     }
@@ -1245,6 +1281,7 @@ void QCR::combine(std::vector<std::vector<int>> &words, std::vector<int> &word)
     int b = (*std::max_element(words.begin(), words.end(),
         [=](auto w1, auto w2) { return w1[4] < w2[4]; }))[4];
     word = { words[0][0], l, r, t, b, nums };
+    printLog(QString("Combine: %1\t%2\t%3\t%4\t%5\t").arg(word[0]).arg(word[1]).arg(word[2]).arg(word[3]).arg(word[4]));
 }
 
 void QCR::spliceWords(std::vector<std::vector<std::vector<int>>> &words)
@@ -1260,7 +1297,7 @@ void QCR::spliceWords(std::vector<std::vector<std::vector<int>>> &words)
         std::sort(words_col.begin(), words_col.end(),
             [=](auto w1, auto w2) { return w1[3] < w2[3]; });
 
-        std::vector<std::vector<int>> words_row = { words_col.front() };
+        std::vector<std::vector<int>> digits = { words_col.front() };
         size_t j = 0;
         while (j < words_col.size() - 1)
         {
@@ -1270,25 +1307,25 @@ void QCR::spliceWords(std::vector<std::vector<std::vector<int>>> &words)
             // 竖直相交高度超过较小高度的1/3则认为是同一行的字符
             if (3 * h_inc > h_min)
             {
-                words_row.push_back(words_col[j + 1]);
+                digits.push_back(words_col[j + 1]);
                 words_col.erase(words_col.begin() + j);
                 continue;
             }
             else
             {
-                std::vector<int> line;
-                combine(words_row, line);
-                words_col[j] = line;
+                std::vector<int> cell;
+                combine(digits, cell);
+                words_col[j] = cell;
 
-                words_row.clear();
-                words_row.push_back(words_col[j + 1]);
+                digits.clear();
+                digits.push_back(words_col[j + 1]);
             }
             ++j;
         }
-        std::vector<int> line;
-        combine(words_row, line);
+        std::vector<int> cell;
+        combine(digits, cell);
         words_col.pop_back();
-        words_col.push_back(line);
+        words_col.push_back(cell);
 
         words[i] = words_col;
     }
@@ -1300,25 +1337,30 @@ void QCR::fusion(std::vector<std::vector<std::vector<int>>> &words)
     {
         for (auto &w : words_col)
         {
+            // 遍历这一列存在的单元格
             for (int i = 0; i < ui.ui_table_widget->rowCount(); ++i)
             {
-                int _c = w[0];
                 std::string srow = std::to_string(i);
-                std::string scol = std::to_string(_c);
-                if (!ocr_result.contains(srow) || !ocr_result.at(srow).contains(scol))
+                if (!ocr_result.contains(srow))
                     continue;
+                std::string scol;
+                for (int j = w[0]; j >= 0; --j)
+                {
+                    scol = std::to_string(j);
+                    if (ocr_result.at(srow).contains(scol))
+                        break;
+                    scol.clear();
+                }
+                if (scol.empty())
+                    continue;
+
                 auto &rect = ocr_result.at(srow).at(scol).at("polygon");
                 int t = (*std::min_element(rect.begin(), rect.end(),
                     [=](auto p1, auto p2) { return p1.at(1) < p2.at(1); })).at(1);
                 int b = (*std::max_element(rect.begin(), rect.end(),
                     [=](auto p1, auto p2) { return p1.at(1) < p2.at(1); })).at(1);
-                // 不相交
-                if (b < w[3])
-                {
-                    continue;
-                }
-                // 从上往下第一个相交的格子即对应的格子
-                else
+
+                if (b > w[3] && 2 * (b - w[3]) > w[4] - w[3])
                 {
                     std::string _text = ocr_result.at(srow).at(scol).at("text");
                     QString text = QString::fromUtf8(_text.c_str());
@@ -1337,6 +1379,8 @@ void QCR::fusion(std::vector<std::vector<std::vector<int>>> &words)
                         ocr_result.at(srow).at(scol).at("text") = std::to_string(w[5]);
                     break;
                 }
+                if (t > w[4])
+                    break;
             }
         }
     }
@@ -1349,20 +1393,18 @@ void QCR::optimize()
     getScoreColumn(rects);
 
     // 预览获取到的范围
-    QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
-    cv::Mat img = cv::imread(path.toLocal8Bit().data());
-    for (auto rect : rects)
-    {
-        cv::rectangle(img, cv::Point(rect[1], rect[3]), cv::Point(rect[2], rect[4]), cv::Scalar(0, 255, 255));
-    }
+    //QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
+    //cv::Mat img = cv::imread(path.toLocal8Bit().data());
+    //for (auto rect : rects)
+    //{
+    //    cv::rectangle(img, cv::Point(rect[1], rect[3]), cv::Point(rect[2], rect[4]), cv::Scalar(0, 255, 255));
+    //}
 
     // 根据获取到的范围切割图片并存储到本地备用
     cropScoreColumn(rects);
     // 从切割的图片中提取字符并识别
     std::vector<std::vector<std::vector<int>>> words;
     extractWords(words);
-
-    return;
 
     // 拼接识别到的数字
     spliceWords(words);
