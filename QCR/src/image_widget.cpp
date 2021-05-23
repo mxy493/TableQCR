@@ -326,6 +326,12 @@ void ImageWidget::setSelectedRect(const std::vector<std::vector<double>> &points
     update();
 }
 
+void ImageWidget::clearSelectedRect()
+{
+    selected_rect.clear();
+    update();
+}
+
 void ImageWidget::drawSelectedRect(QPainter &painter)
 {
     QVector<QPoint> points;
