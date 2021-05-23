@@ -304,9 +304,9 @@ void QCR::runBdOcr(const std::string &base64_img)
             // 百度QPS限制, 查询不能过于频繁
             QThread::sleep(1);
             ret = bdGetResult(response, bd_get_result_url, bd_access_token, request_id, "json");
-            if (ret != 0)
+            if (ret == 0)
             {
-                printLog(response);
+                printLog(response, false);
                 json ocr_result = json::parse(response);
                 if (ocr_result.at("result").at("ret_code") == 3)
                     break;
