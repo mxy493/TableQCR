@@ -75,6 +75,7 @@ QCR::QCR(QWidget *parent)
         [&]() {
             config_dialog.loadConfig();
             getBdAccessToken();
+            loadModel("./data/mnist.json");
         });
 
     if (!QDir("data").exists())
@@ -84,7 +85,6 @@ QCR::QCR(QWidget *parent)
     }
     else
     {
-        init(model);
         initial_thread->start();
     }
 }
@@ -1230,10 +1230,10 @@ void QCR::extractWords(std::vector<std::vector<std::vector<int>>> &words)
         for (auto &contour : contours)
         {
             cv::Rect rect = cv::boundingRect(contour);
-            // 如果超过宽度超过高度的2倍认为不是数字
-            if (rect.height < 10 || rect.height > 50 ||
-                rect.width < 5 || rect.width > 50 ||
-                rect.width > 2 * rect.height)
+            // 如果超过宽度超过高度的3/2倍认为不是数字
+            if (rect.height < 12 || rect.height > 80 ||
+                rect.width < 6 || rect.width > 60 ||
+                2 * rect.width > 3 * rect.height)
                 continue;
 
             cv::RotatedRect min_rect = cv::minAreaRect(contour);
