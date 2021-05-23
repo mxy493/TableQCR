@@ -26,9 +26,16 @@ public:
     QCR(QWidget *parent = Q_NULLPTR);
     void getBdAccessToken();
     void resizeImage(const QString &path, int len = IMG_LENGTH, int sz = IMG_SIZE);
+    /*
+    * @brief 合并霍夫变换检测的线段并计算四个交点坐标
+    * @param lines 检测到的线段
+    * @param points 四个交点坐标, 分别是[left-up, right-up, right-bottom, left-bottom]
+    */
+    void getVertexes(std::vector<cv::Vec4i> &lines, std::vector<cv::Point> &points);
     // 边缘检测主要是拿到4个顶点的相对坐标, 可以将图片缩小以加快处理速度
     void edgeDetection();
-    void processImage();
+    void runTxOcr(const std::string &base64_img);
+    void runBdOcr(const std::string &base64_img);
     void updateTableCell(int row, int col, int row_span, int col_span, const QString &text);
     void updateTable();
     void resetTable();
@@ -48,10 +55,6 @@ public:
     void spliceWords(std::vector<std::vector<std::vector<int>>> &words);
     // 融合OCR和数字识别的结果
     void fusion(std::vector<std::vector<std::vector<int>>> &words);
-    // 计算平均值和标准差
-    void calAveSd(const std::vector<double> &vec, double &ave, double &sd);
-    void calAveSd(const std::vector<int> &vec, double &ave, double &sd);
-    void getVertexes(std::vector<cv::Vec4i> &lines, std::vector<cv::Point> &points);
     void closeEvent(QCloseEvent *event);
 
 signals:
@@ -63,11 +66,8 @@ public slots:
     void interceptImage();
     void restore();
     void runOcr();
-    void runTxOcr(const std::string &base64_img);
-    void runBdOcr(const std::string &base64_img);
     void optimize();
     void exportTableData();
-    void recognize();
     void msg_box(QString msg);
 
 private:
@@ -81,25 +81,23 @@ private:
     LoadingAnimation animation;  // 加载动画
 
     QAction *act_open;    // 打开按钮
-    QAction *act_rotate;  //打开按钮
+    QAction *act_rotate;  // 旋转按钮
     QAction *act_crop;    // 裁剪按钮
-    QAction *act_restore;    // 恢复按钮
+    QAction *act_restore; // 恢复按钮
     QAction *act_ocr;     // 识别按钮
     QAction *act_optimize;// 识别按钮
     QAction *act_export;  // 导出按钮
     QAction *act_config;  // 设置按钮
     QAction *act_about;   // 关于按钮
 
-    QAction *test1_action;   // 测试1
-
-    QString img_path;        // 图片路径
-    QString img_path_cropped;  // 透视变换后的图片路径
+    QString img_path;           // 图片路径
+    QString img_path_cropped;   // 透视变换后的图片路径
 
     bool ocr_success; // 执行OCR识别是否成功
     std::string bd_access_token; // 百度Access Token
 
     /*
-    * 将数据统一格式化为
+    * 将数据统一格式化为:
     * {
     *   "[row]": {
     *     "[col]": {

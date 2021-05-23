@@ -29,6 +29,7 @@ int bdFormOcrRequest(std::string &json_result,
 /*
 * @brief 获取表格识别结果
 * @param json_result 获取到的返回值, json 格式字符串
+* @return 成功返回0，否则返回其他错误码
 */
 int bdGetResult(std::string &json_result, const std::string &request_url,
     const std::string &access_token, const std::string &request_id,
