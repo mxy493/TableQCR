@@ -38,7 +38,7 @@ public:
     void runBdOcr(const std::string &base64_img);
     void updateTableCell(int row, int col, int row_span, int col_span, const QString &text);
     void updateTable();
-    void resetTable();
+    void reset();
     void txParseData(const std::string &str);
     void bdParseData(const std::string &str);
     // 根据某一列的文本内容判断其是否是分数列, 返回所有分数列的像素范围及其对应的列数[col, left, right, top, bottom]

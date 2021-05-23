@@ -30,6 +30,7 @@ public:
     void setInterceptBox(const std::vector<std::vector<double>> &points);
     void drawInterceptBox(QPainter &painter);
     void setSelectedRect(const std::vector<std::vector<double>> &points);
+    void clearSelectedRect();
     void drawSelectedRect(QPainter &painter);
 
     void mousePressEvent(QMouseEvent *event);

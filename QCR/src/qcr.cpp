@@ -177,7 +177,7 @@ void QCR::openImage()
         int sz = config_dialog.ui.spin_img_size->value();
         resizeImage(img_path, len, sz);
 
-        resetTable();
+        reset();
         ui.ui_img_widget->setPix(QPixmap(path));
 
         if (config_dialog.ui.check_auto_edge_detection->isChecked())
@@ -724,7 +724,8 @@ void QCR::updateTableCell(int row, int col, int row_span, int col_span, const QS
 
 void QCR::updateTable()
 {
-    resetTable();
+    ui.ui_table_widget->clearContents();
+    ui.ui_table_widget->clearSpans();
     // C++17
     for (auto &[srow, cells] : ocr_result.items())
     {
@@ -740,10 +741,14 @@ void QCR::updateTable()
     }
 }
 
-void QCR::resetTable()
+void QCR::reset()
 {
+    ocr_result.clear();
+
     ui.ui_table_widget->clearContents();
     ui.ui_table_widget->clearSpans();
+    
+    ui.ui_img_widget->clearSelectedRect();
 }
 
 void QCR::txParseData(const std::string &str)
@@ -1416,7 +1421,7 @@ void QCR::restore()
     }
     this->act_restore->setEnabled(false);
     this->act_optimize->setEnabled(false);
-    resetTable();
+    reset();
 }
 
 void QCR::closeEvent(QCloseEvent *event)
