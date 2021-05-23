@@ -57,6 +57,12 @@ QPixmap ImageWidget::getPix()
     return src_pix;
 }
 
+void ImageWidget::getSize(int &width, int &height)
+{
+    width = src_pix.width();
+    height = src_pix.height();
+}
+
 void ImageWidget::rotateImage()
 {
     // 旋转图片
