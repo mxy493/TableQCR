@@ -370,9 +370,8 @@ void QCR::drawSelectedCell(int row, int col)
     std::string scol = std::to_string(col);
     if (ocr_result.contains(srow) && ocr_result.at(srow).contains(scol))
     {
-        QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
-        cv::Mat img = cv::imread(path.toLocal8Bit().data());
-
+        int w, h;
+        ui.ui_img_widget->getSize(w, h);
         auto &rect = ocr_result.at(srow).at(scol).at("polygon");
 
         std::vector<std::vector<double>> points;
@@ -380,8 +379,8 @@ void QCR::drawSelectedCell(int row, int col)
         {
             int x = rect.at(i).at(0);
             int y = rect.at(i).at(1);
-            double xr = static_cast<double>(x) / img.cols;
-            double yr = static_cast<double>(y) / img.rows;
+            double xr = static_cast<double>(x) / w;
+            double yr = static_cast<double>(y) / h;
             points.push_back({ xr, yr });
         }
         ui.ui_img_widget->setSelectedRect(points);

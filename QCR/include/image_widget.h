@@ -17,6 +17,7 @@ public:
 
     void setPix(QPixmap pix);
     QPixmap getPix();   // 获取src_pix
+    void getSize(int &width, int &height);
     void rotateImage();
     void inVertex(const QPoint &pos);
     void getVertex(std::vector<std::vector<double>> &points);
