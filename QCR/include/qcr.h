@@ -113,5 +113,4 @@ private:
     * 方便直接根据行列坐标定位某单元格的信息
     */
     json ocr_result = json::object();
-    const std::string model = "data/digits60000.weights"; // 数字识别模型
 };
