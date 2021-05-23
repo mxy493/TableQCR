@@ -61,6 +61,8 @@ signals:
     void msg_signal(QString msg);
 
 public slots:
+    void msg_box(QString msg);
+
     void openImage();
     void rotateImage();
     void interceptImage();
@@ -68,7 +70,8 @@ public slots:
     void runOcr();
     void optimize();
     void exportTableData();
-    void msg_box(QString msg);
+
+    void drawSelectedCell(int row, int col);
 
 private:
     Ui::QCRClass ui;
