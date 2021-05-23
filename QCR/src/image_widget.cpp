@@ -41,6 +41,7 @@ void ImageWidget::paintEvent(QPaintEvent *event)
     {
         drawImage(painter);
         drawInterceptBox(painter);
+        drawSelectedRect(painter);
     }
 }
 
@@ -314,5 +315,33 @@ void ImageWidget::drawInterceptBox(QPainter &painter)
     {
         painter.drawEllipse(intercept_abs[i], CIRCLE_SIZE, CIRCLE_SIZE);
         painter.drawLine(intercept_abs[i], intercept_abs[(i + 1) % 4]);
+    }
+}
+
+void ImageWidget::setSelectedRect(const std::vector<std::vector<double>> &points)
+{
+    selected_rect.clear();
+    for (const auto &p : points)
+        selected_rect.append(QPointF(p[0], p[1]));
+    update();
+}
+
+void ImageWidget::drawSelectedRect(QPainter &painter)
+{
+    QVector<QPoint> points;
+    for (const auto &p : selected_rect)
+    {
+        // 补偿2个像素的精度损失
+        int _x = h_margin + p.x() * scaled_pix.width() + 2;
+        int _y = v_margin + p.y() * scaled_pix.height() + 2;
+        points.append(QPoint(_x, _y));
+    }
+
+    painter.setRenderHints(QPainter::Antialiasing, true);
+    painter.setPen(QPen(QBrush(Qt::yellow), 3));
+
+    for (int i = 0; i < points.size(); ++i)
+    {
+        painter.drawLine(points[i], points[(i + 1) % 4]);
     }
 }

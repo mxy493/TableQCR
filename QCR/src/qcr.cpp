@@ -61,6 +61,7 @@ QCR::QCR(QWidget *parent)
     connect(act_about, &QAction::triggered, &about_dlg, &QDialog::show);
 
     connect(this, &QCR::msg_signal, this, &QCR::msg_box);
+    connect(ui.ui_table_widget, &QTableWidget::cellClicked, this, &QCR::drawSelectedCell);
 
     // 设置表格样式
     ui.ui_table_widget->setStyleSheet(
@@ -360,6 +361,30 @@ void QCR::exportTableData()
             QTimer::singleShot(3000, &msg, &QMessageBox::accept);
             msg.exec();
         }
+    }
+}
+
+void QCR::drawSelectedCell(int row, int col)
+{
+    std::string srow = std::to_string(row);
+    std::string scol = std::to_string(col);
+    if (ocr_result.contains(srow) && ocr_result.at(srow).contains(scol))
+    {
+        QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
+        cv::Mat img = cv::imread(path.toLocal8Bit().data());
+
+        auto &rect = ocr_result.at(srow).at(scol).at("polygon");
+
+        std::vector<std::vector<double>> points;
+        for (int i = 0; i < 4; ++i)
+        {
+            int x = rect.at(i).at(0);
+            int y = rect.at(i).at(1);
+            double xr = static_cast<double>(x) / img.cols;
+            double yr = static_cast<double>(y) / img.rows;
+            points.push_back({ xr, yr });
+        }
+        ui.ui_img_widget->setSelectedRect(points);
     }
 }
 

@@ -29,6 +29,8 @@ public:
     void drawImage(QPainter &painter);
     void setInterceptBox(const std::vector<std::vector<double>> &points);
     void drawInterceptBox(QPainter &painter);
+    void setSelectedRect(const std::vector<std::vector<double>> &points);
+    void drawSelectedRect(QPainter &painter);
 
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
@@ -41,6 +43,7 @@ private:
     double img_scale = 1.0;      // scaled/src
     QVector<QPoint> intercept_abs;   // 以 widget 为参照的左上、右上、右下、左下
     QVector<QPointF> intercept_rel;  // 以图片为参照的相对坐标
+    QVector<QPointF> selected_rect;  // 选中的格子的相对坐标
     bool initial = true;
     int vertex_index = -1;
     int h_margin = 0;
