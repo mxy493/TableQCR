@@ -23,14 +23,13 @@ void stdProcImg(cv::Mat &img)
     if (img.channels() == 3)
         cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
     // 压缩到24×24, 然后添加两三个像素的边框
-    double scale = std::min(static_cast<double>(width - 4) / img.cols, static_cast<double>(height - 4) / img.rows);
+    double scale = std::min(static_cast<double>(width - 4) / img.cols,
+        static_cast<double>(height - 4) / img.rows);
     cv::resize(img, img, cv::Size(), scale, scale);
     int top = (height - img.rows) / 2;
     int bottom = height - img.rows - top;
     int left = (width - img.cols) / 2;
     int right = width - img.cols - left;
-    printLog("top: " + std::to_string(top) + ", bottom: " + std::to_string(bottom)
-        + ", left: " + std::to_string(left) + ", right: " + std::to_string(right));
     cv::copyMakeBorder(img, img, top, bottom, left, right, cv::BORDER_CONSTANT, cv::Scalar(0));
 }
 
@@ -48,12 +47,12 @@ int predict(const cv::Mat &src)
     const std::vector<float> vec = result.front().to_vector();
     auto it = std::max_element(vec.begin(), vec.end());
     int predict = std::distance(vec.begin(), it);
-    std::cout << "Predict = " << predict << std::endl;
 
-    static int index = 1;
-    std::string file = "classify/" + std::to_string(predict) + "_" + std::to_string(index) + ".jpg";
-    cv::imwrite(file, img);
-    ++index;
+    // 保存图片并以识别结果命名用于查看识别效果
+    //static int index = 1;
+    //std::string file = "classify/" + std::to_string(predict) + "_" + std::to_string(index) + ".jpg";
+    //cv::imwrite(file, img);
+    //++index;
 
     return predict;
 }
