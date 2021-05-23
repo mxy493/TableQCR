@@ -1,4 +1,4 @@
-#include <QFileDialog>
+﻿#include <QFileDialog>
 #include <QTextStream>
 #include <QDateTime>
 #include <QIODevice>
@@ -58,11 +58,6 @@ QCR::QCR(QWidget *parent)
     connect(act_about, &QAction::triggered, &about_dlg, &QDialog::show);
 
     connect(this, &QCR::msg_signal, this, &QCR::msg_box);
-
-    // 测试按钮
-    test1_action = new QAction(QIcon(":/images/logo.png"), QString::fromUtf8(u8"测试"));
-    ui.toolbar->addAction(test1_action);
-    connect(test1_action, &QAction::triggered, this, &QCR::recognize);
 
     // 设置表格样式
     ui.ui_table_widget->setStyleSheet(
@@ -363,78 +358,6 @@ void QCR::exportTableData()
             msg.exec();
         }
     }
-}
-
-void QCR::recognize()
-{
-    processImage();
-    /*
-    if (initial_thread->isRunning())
-        initial_thread->wait();
-
-    // If set, always convert image to the 3 channel BGR color image.
-    cv::Mat img = cv::imread(img_path.toLocal8Bit().data(), cv::IMREAD_COLOR);
-
-    auto start = std::chrono::system_clock::now();
-    std::vector<std::vector<std::vector<int>>> boxes;
-    det.Run(img, boxes);
-
-    // boxes to boxes_map
-    std::map<int, Box> boxes_map;
-    Box b;
-    for (size_t i = 0; i < boxes.size(); ++i)
-    {
-        b.p1 = cv::Point(boxes[i][0][0], boxes[i][0][1]);
-        b.p2 = cv::Point(boxes[i][1][0], boxes[i][1][1]);
-        b.p3 = cv::Point(boxes[i][2][0], boxes[i][2][1]);
-        b.p4 = cv::Point(boxes[i][3][0], boxes[i][3][1]);
-        boxes_map[i] = b;
-    }
-
-    // Inferring table structure
-    std::vector<std::vector<std::vector<int>>> index_table;
-    infer_table(boxes_map, index_table);
-
-    std::map<int, TextBlock> results = rec.Run(boxes_map, img, cls);
-    auto end = std::chrono::system_clock::now();
-    auto duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-
-    double t = double(duration.count()) * std::chrono::microseconds::period::num
-        / std::chrono::microseconds::period::den;
-    printLog(QString::fromUtf8(u8"耗时 %1 秒").arg(QString::number(t, 'f', 3));
-
-    // Fill in the data in the table
-    ui.ui_table_widget->clearContents();
-    for (size_t i = 0; i < index_table.size(); ++i)
-    {
-        for (size_t j = 0; j < index_table[i].size(); ++j)
-        {
-            std::vector<int> cell = index_table[i][j];
-            int index = cell[0];
-            if (index == -1)
-                continue;
-            QTableWidgetItem *item = ui.ui_table_widget->item(cell[1], cell[2]);
-            if (cell[3] > 1 || cell[4] > 1)
-                ui.ui_table_widget->setSpan(cell[1], cell[2], cell[3], cell[4]);
-            if (item)
-            {
-                item->setText(results[index].text);
-                ui.ui_table_widget->setItem(i, j, item);
-            }
-            else
-            {
-                ui.ui_table_widget->setItem(i, j,
-                    new QTableWidgetItem(results[index].text));
-            }
-        }
-    }
-
-    // export data
-    QFileInfo info(img_path);
-    std::string det_name = "./tmp/" + info.baseName().toLocal8Bit() + "_DET.tiff";
-    Utility::VisualizeBboxes(img, boxes, det_name);
-    */
 }
 
 void QCR::msg_box(QString msg)
@@ -744,94 +667,6 @@ void QCR::edgeDetection()
     }
 
     ui.ui_img_widget->setInterceptBox(points_rel);
-}
-
-void QCR::processImage()
-{
-    QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
-    cv::Mat img = cv::imread(path.toLocal8Bit().data());
-
-    // 检查是否为灰度图，如果不是，转化为灰度图
-    cv::Mat gray = img.clone();
-    if (img.channels() == 3)
-        cvtColor(img, gray, CV_BGR2GRAY);
-
-    // 均值滤波
-    cv::Mat blured;
-    cv::bilateralFilter(gray, blured, 7, 75, 75);
-
-    // 自适应均衡化，提高对比度，裁剪效果更好
-    cv::Mat proc;
-    cv::Ptr<cv::CLAHE> clahe = createCLAHE(1, cv::Size(10, 10));
-    clahe->apply(blured, proc);
-
-    // 自适应阈值，转化为黑白图片
-    adaptiveThreshold(proc, proc, 255,
-        CV_ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, 7, 3);
-
-    return;
-
-    // 形态学, 保留较长的横竖线条
-    // 黑底白字, 腐蚀掉白字
-    cv::Mat struct_h = cv::getStructuringElement(
-        cv::MORPH_RECT, cv::Size(40, 1));
-    cv::Mat mat_h;
-    erode(proc, mat_h, struct_h, cv::Size(-1, -1), 2);
-    dilate(mat_h, mat_h, struct_h, cv::Size(-1, -1), 2);
-
-    // 边缘检测
-    cv::Mat canny_h;
-    Canny(mat_h, canny_h, 50, 200);
-
-    std::vector<cv::Vec4i> h_lines;
-    // 距离精度1像素、角度精度1°、最少交点数200、最小长度200、最长断连50像素
-    HoughLinesP(canny_h, h_lines, 1, CV_PI / 180, 50, 100, 50);
-    std::vector<cv::Vec3d> lines_h = mergeLines(h_lines, true);
-    printLog(QString::fromUtf8("rows = %1").arg(lines_h.size()));
-
-    cv::Mat struct_v = cv::getStructuringElement(
-        cv::MORPH_RECT, cv::Size(1, 40));
-    cv::Mat mat_v;
-    erode(proc, mat_v, struct_v, cv::Size(-1, -1), 2);
-    dilate(mat_v, mat_v, struct_v, cv::Size(-1, -1), 2);
-
-    // 边缘检测
-    cv::Mat canny_v;
-    Canny(mat_v, canny_v, 50, 200);
-
-    std::vector<cv::Vec4i> v_lines;
-    // 距离精度1像素、角度精度1°、最少交点数200、最小长度200、最长断连50像素
-    HoughLinesP(canny_v, v_lines, 1, CV_PI / 180, 50, 100, 50);
-    std::vector<cv::Vec3d> lines_v = mergeLines(v_lines, false);
-    printLog(QString::fromUtf8("cols = %1").arg(lines_v.size()));
-
-    cv::Mat mat_table;
-    bitwise_and(mat_h, mat_v, mat_table);
-
-    //提取轮廓
-    std::vector<cv::Vec4i> hierarchy;
-    std::vector<std::vector<cv::Point>> contours;
-    cv::findContours(mat_table, contours, hierarchy,
-        CV_RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
-
-    // 计算中点坐标
-    std::vector<cv::Point> points_list;
-    for (auto &contour : contours)
-    {
-        int sum_x = 0;
-        int sum_y = 0;
-        for (auto &p : contour)
-        {
-            sum_x += p.x;
-            sum_y += p.y;
-        }
-        int x = sum_x / contour.size();
-        int y = sum_y / contour.size();
-        points_list.push_back(cv::Point(x, y));
-    }
-    printLog(QString::fromUtf8("Point count = ").arg(points_list.size()));
-
-    return;
 }
 
 void QCR::updateTableCell(int row, int col, int row_span, int col_span, const QString &text)
@@ -1226,7 +1061,7 @@ void QCR::extractWords(std::vector<std::vector<std::vector<int>>> &words)
 
         // 对应一张图片（一列）的结果
         std::vector<std::vector<int>> words_col;
-        //cv::Mat tmp = img.clone();
+        cv::Mat tmp = img.clone();
         for (auto &contour : contours)
         {
             cv::Rect rect = cv::boundingRect(contour);
@@ -1285,8 +1120,8 @@ void QCR::extractWords(std::vector<std::vector<std::vector<int>>> &words)
             cv::warpPerspective(word, word, reverse, cv::Size(r - l, b - t));
 
             // 拟合的矩形框
-            //for (int i = 0; i < 4; ++i)
-            //    cv::line(tmp, points[i], points[(i + 1) % 4], cv::Scalar(0, 255, 255));
+            for (int i = 0; i < 4; ++i)
+                cv::line(tmp, points[i], points[(i + 1) % 4], cv::Scalar(0, 255, 255));
 
             // 识别提取出的数字
             int number = predict(word);
@@ -1450,24 +1285,6 @@ void QCR::optimize()
     fusion(words);
     // 将数据更新到界面
     updateTable();
-}
-
-void QCR::calAveSd(const std::vector<double> &vec, double &ave, double &sd)
-{
-    if (vec.empty())
-        return;
-    int n = vec.size();
-    ave = std::accumulate(vec.begin(), vec.end(), 0.0) / n;
-    sd = std::sqrt(std::accumulate(vec.begin(), vec.end(), 0.0,
-        [=](double sum, double d) {return sum += std::pow(d - ave, 2); }) / n);
-}
-
-void QCR::calAveSd(const std::vector<int> &vec, double &ave, double &sd)
-{
-    std::vector<double> v;
-    for (auto val : vec)
-        v.push_back(static_cast<double>(val));
-    return calAveSd(v, ave, sd);
 }
 
 void QCR::interceptImage()

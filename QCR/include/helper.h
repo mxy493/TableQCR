@@ -26,6 +26,13 @@ void printLog(const std::string &log, bool save = true);
 void printLog(const char *log, bool save = true);
 
 /*
+* @brief 计算平均值和标准差
+*/
+void calAveSd(const std::vector<double> &vec, double &ave, double &sd);
+
+void calAveSd(const std::vector<int> &vec, double &ave, double &sd);
+
+/*
 * @brief 将int64_t类型的unix时间戳转换为字符串
 */
 std::string get_data(const int64_t &timestamp);
@@ -95,6 +102,6 @@ template <typename T>
 std::vector<std::vector<T>> transpose(std::vector<std::vector<T>> &vec);
 
 /*
-* @brief 取除文字, 保留表格
+* @brief 去除文字, 保留表格
 */
 void removeText(const cv::Mat &src);

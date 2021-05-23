@@ -51,6 +51,24 @@ void printLog(const char *log, bool save)
     printLog(QString(log), save);
 }
 
+void calAveSd(const std::vector<double> &vec, double &ave, double &sd)
+{
+    if (vec.empty())
+        return;
+    int n = vec.size();
+    ave = std::accumulate(vec.begin(), vec.end(), 0.0) / n;
+    sd = std::sqrt(std::accumulate(vec.begin(), vec.end(), 0.0,
+        [=](double sum, double d) {return sum += std::pow(d - ave, 2); }) / n);
+}
+
+void calAveSd(const std::vector<int> &vec, double &ave, double &sd)
+{
+    std::vector<double> v;
+    for (auto val : vec)
+        v.push_back(static_cast<double>(val));
+    return calAveSd(v, ave, sd);
+}
+
 std::string get_data(const int64_t &timestamp)
 {
     std::string utcDate;
@@ -258,7 +276,7 @@ std::vector<cv::Vec3d> mergeLines(std::vector<cv::Vec4i> &lines, bool horizontal
         + (lines[0][1] - lines[0][3]) * (lines[0][1] - lines[0][3]));
     // 最长线的索引和长度
     std::pair<int, double> mark = { 0,  d };
-    for (size_t i = 1; i < lines.size(); ++i)
+    for (int i = 1; i < lines.size(); ++i)
     {
         int x1 = lines[i][0];
         int y1 = lines[i][1];
