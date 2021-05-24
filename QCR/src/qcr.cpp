@@ -29,8 +29,11 @@ QCR::QCR(QWidget *parent)
 
     act_open = new QAction(QIcon(":/images/act_open.svg"), QString::fromUtf8(u8"打开"));    
     act_rotate = new QAction(QIcon(":/images/act_rotate.svg"), QString::fromUtf8(u8"旋转"));
+    act_rotate->setEnabled(false);
     act_contour = new QAction(QIcon(":/images/act_contour.svg"), QString::fromUtf8(u8"轮廓"));
+    act_contour->setEnabled(false);
     act_crop = new QAction(QIcon(":/images/act_crop.svg"), QString::fromUtf8(u8"校正"));
+    act_crop->setEnabled(false);
     act_restore = new QAction(QIcon(":/images/act_undo.svg"), QString::fromUtf8(u8"恢复"));
     act_restore->setEnabled(false); // 默认不可用, 点击"校正"按钮后可用
     act_ocr = new QAction(QIcon(":/images/act_ocr.svg"), QString::fromUtf8(u8"识别"));
@@ -181,6 +184,10 @@ void QCR::openImage()
 
         reset();
         ui.ui_img_widget->setPix(cvMatToQPixmap(cropped_img));
+
+        act_rotate->setEnabled(true);
+        act_contour->setEnabled(true);
+        act_crop->setEnabled(true);
 
         if (config_dialog.ui.check_auto_edge_detection->isChecked())
             edgeDetection();
