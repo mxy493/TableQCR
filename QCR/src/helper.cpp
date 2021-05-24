@@ -9,7 +9,7 @@
 
 #include <include/base64.h>
 #include <include/helper.h>
-
+#include "QPixmap"
 
 QString getCurTimeString()
 {
@@ -81,34 +81,135 @@ std::string get_data(const int64_t &timestamp)
     return utcDate;
 }
 
+QImage cvMatToQImage(const cv::Mat &mat)
 {
-    cv::Mat img = cv::imread(img_file);
-    QFileInfo info(QString::fromLocal8Bit(img_file.c_str()));
-    std::string sfx = info.suffix().toLocal8Bit().data();
-    sfx.insert(sfx.begin(), '.');
-    std::vector<uchar> buf;
-    // 百度支持的图片格式: PNG、JPG、JPEG、BMP
-    cv::imencode(sfx, img, buf);
-    auto base64_img = reinterpret_cast<const unsigned char *>(buf.data());
-    base64 = /*"data:image/jpeg;base64," +*/ base64_encode(base64_img, buf.size());
-    // 写入到文件
-    QDir dir;
-    if (!dir.exists("./tmp"))
+    switch (mat.type())
     {
-        dir.mkdir("tmp");
-    }
-    // 打开保存文件对话框
-    QString file_path = QString::fromUtf8(u8"./tmp/%1_base64.txt").arg(info.baseName());
-    QFile file(file_path);
-    if (file.open(QIODevice::WriteOnly))
+        // 8-bit, 4 channel
+    case CV_8UC4:
     {
-        QTextStream out(&file);
-        out.setCodec("UTF-8");
-        out << base64.c_str();
-        out.flush();
-        file.close();
-        printLog(QString::fromUtf8(u8"原图片经base64编码后已写入到: ") + file_path);
+        QImage image(mat.data,
+            mat.cols, mat.rows,
+            static_cast<int>(mat.step),
+            QImage::Format_ARGB32);
+        return image;
     }
+
+    // 8-bit, 3 channel
+    case CV_8UC3:
+    {
+        QImage image(mat.data,
+            mat.cols, mat.rows,
+            static_cast<int>(mat.step),
+            QImage::Format_RGB888);
+        return image.rgbSwapped();
+    }
+
+    // 8-bit, 1 channel
+    case CV_8UC1:
+    {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
+        QImage image(mat.data,
+            mat.cols, mat.rows,
+            static_cast<int>(mat.step),
+            QImage::Format_Grayscale8);
+#else
+        static QVector<QRgb>  sColorTable;
+
+        // only create our color table the first time
+        if (sColorTable.isEmpty())
+        {
+            sColorTable.resize(256);
+            for (int i = 0; i < 256; ++i)
+            {
+                sColorTable[i] = qRgb(i, i, i);
+            }
+        }
+
+        QImage image(mat.data,
+            mat.cols, mat.rows,
+            static_cast<int>(mat.step),
+            QImage::Format_Indexed8);
+        image.setColorTable(sColorTable);
+#endif
+        return image;
+    }
+
+    default:
+        printLog(QString("cvMatToQImage(): cv::Mat image type not handled in switch: %1").arg(mat.type()));
+        break;
+    }
+
+    return QImage();
+}
+
+QPixmap cvMatToQPixmap(const cv::Mat &mat)
+{
+    return QPixmap::fromImage(cvMatToQImage(mat));
+}
+
+cv::Mat QImageToCvMat(const QImage &inImage, bool inCloneImageData)
+{
+    switch (inImage.format())
+    {
+        // 8-bit, 4 channel
+    case QImage::Format_ARGB32:
+    case QImage::Format_ARGB32_Premultiplied:
+    {
+        cv::Mat mat(inImage.height(), inImage.width(),
+            CV_8UC4,
+            const_cast<uchar *>(inImage.bits()),
+            static_cast<size_t>(inImage.bytesPerLine())
+        );
+        return (inCloneImageData ? mat.clone() : mat);
+    }
+
+    // 8-bit, 3 channel
+    case QImage::Format_RGB32:
+    {
+        cv::Mat mat(inImage.height(), inImage.width(),
+            CV_8UC4,
+            const_cast<uchar *>(inImage.bits()),
+            static_cast<size_t>(inImage.bytesPerLine())
+        );
+        cv::Mat matNoAlpha;
+        cv::cvtColor(mat, matNoAlpha, cv::COLOR_BGRA2BGR);   // drop the all-white alpha channel
+        return matNoAlpha;
+    }
+
+    // 8-bit, 3 channel
+    case QImage::Format_RGB888:
+    {
+        QImage swapped = inImage.rgbSwapped();
+        return cv::Mat(swapped.height(), swapped.width(),
+            CV_8UC3,
+            const_cast<uchar *>(swapped.bits()),
+            static_cast<size_t>(swapped.bytesPerLine())
+        ).clone();
+    }
+
+    // 8-bit, 1 channel
+    case QImage::Format_Indexed8:
+    {
+        cv::Mat  mat(inImage.height(), inImage.width(),
+            CV_8UC1,
+            const_cast<uchar *>(inImage.bits()),
+            static_cast<size_t>(inImage.bytesPerLine())
+        );
+        return (inCloneImageData ? mat.clone() : mat);
+    }
+
+    default:
+        printLog(QString("ASM::QImageToCvMat() - QImage format not handled in switch:").arg(inImage.format()));
+        break;
+    }
+
+    return cv::Mat();
+}
+
+cv::Mat QPixmapToCvMat(const QPixmap &inPixmap, bool inCloneImageData)
+{
+    return QImageToCvMat(inPixmap.toImage(), inCloneImageData);
 }
 
 bool are_same_column(int l1, int r1, int l2, int r2)

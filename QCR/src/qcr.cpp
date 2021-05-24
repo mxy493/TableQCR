@@ -177,7 +177,7 @@ void QCR::openImage()
         resizeImage(img_path, len, sz);
 
         reset();
-        ui.ui_img_widget->setPix(QPixmap(path));
+        ui.ui_img_widget->setPix(cvMatToQPixmap(cropped_img));
 
         if (config_dialog.ui.check_auto_edge_detection->isChecked())
             edgeDetection();
@@ -1400,7 +1400,7 @@ void QCR::interceptImage()
 
     QFileInfo info(img_path);
     cv::imwrite(img_path.toLocal8Bit().data(), cropped_img);
-    ui.ui_img_widget->setPix(QPixmap(img_path));
+    ui.ui_img_widget->setPix(cvMatToQPixmap(cropped_img));
 
     this->act_restore->setEnabled(true);
 }
@@ -1425,8 +1425,8 @@ void QCR::restore()
     }
     // 恢复原始图片
     cropped_img = src_img.clone();
+    ui.ui_img_widget->setPix(cvMatToQPixmap(cropped_img));
     cv::imwrite(img_path.toLocal8Bit().data(), cropped_img);
-    ui.ui_img_widget->setPix(QPixmap(img_path));
 
     this->act_restore->setEnabled(false);
     this->act_optimize->setEnabled(false);
