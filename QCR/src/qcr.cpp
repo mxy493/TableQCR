@@ -1029,17 +1029,14 @@ void QCR::cropScoreColumn(const std::vector<std::vector<int>> &rects)
     QFileInfo info(img_path);
     QString base_name = info.baseName();
     QDir dir(info.absolutePath() + QString("/") + base_name);
-    printLog(dir.absolutePath());
-    if (!dir.exists())
+    if (dir.exists())
     {
-        dir.setPath(info.absolutePath());
-        if (dir.mkdir(base_name))
-            printLog(QString::fromUtf8(u8"创建裁剪文件夹成功: /tmp/%1").arg(base_name));
+        printLog(QString::fromUtf8(u8"删除已有文件夹: %1").arg(dir.absolutePath()));
+        dir.removeRecursively();
     }
-    else if (!dir.removeRecursively())
-    {
-        printLog(QString::fromUtf8(u8"尝试清空文件夹(%1)失败!").arg(dir.absolutePath()));
-    }
+    dir.setPath(info.absolutePath());
+    if (dir.mkdir(base_name))
+        printLog(QString::fromUtf8(u8"创建裁剪文件夹成功: /tmp/%1").arg(base_name));
 
     for (auto &rect : rects)
     {
