@@ -93,10 +93,9 @@ private:
     QAction *act_config;  // 设置按钮
     QAction *act_about;   // 关于按钮
 
-    cv::Mat src_img;            // 缩放后的原图
-    cv::Mat cropped_img;        // 后续处理都对该图进行处理
-    QString img_path;           // 图片路径
-    QString img_path_cropped;   // 透视变换后的图片路径
+    cv::Mat src_img;      // 缩放后的原图
+    cv::Mat cropped_img;  // 后续处理都对该图进行处理
+    QString img_path;     // 图片路径
 
     bool ocr_success; // 执行OCR识别是否成功
     std::string bd_access_token; // 百度Access Token
