@@ -29,6 +29,7 @@ QCR::QCR(QWidget *parent)
 
     act_open = new QAction(QIcon(":/images/act_open.svg"), QString::fromUtf8(u8"打开"));    
     act_rotate = new QAction(QIcon(":/images/act_rotate.svg"), QString::fromUtf8(u8"旋转"));
+    act_contour = new QAction(QIcon(":/images/act_contour.svg"), QString::fromUtf8(u8"轮廓"));
     act_crop = new QAction(QIcon(":/images/act_crop.svg"), QString::fromUtf8(u8"校正"));
     act_restore = new QAction(QIcon(":/images/act_undo.svg"), QString::fromUtf8(u8"恢复"));
     act_restore->setEnabled(false); // 默认不可用, 点击"校正"按钮后可用
@@ -42,6 +43,7 @@ QCR::QCR(QWidget *parent)
 
     ui.toolbar->addAction(act_open);
     ui.toolbar->addAction(act_rotate);
+    ui.toolbar->addAction(act_contour);
     ui.toolbar->addAction(act_crop);
     ui.toolbar->addAction(act_restore);
     ui.toolbar->addAction(act_ocr);
@@ -52,6 +54,7 @@ QCR::QCR(QWidget *parent)
 
     connect(act_open, &QAction::triggered, this, &QCR::openImage);
     connect(act_rotate, &QAction::triggered, this, &QCR::rotateImage);
+    connect(act_contour, &QAction::triggered, this, &QCR::edgeDetection);
     connect(act_crop, &QAction::triggered, this, &QCR::interceptImage);
     connect(act_restore, &QAction::triggered, this, &QCR::restore);
     connect(act_ocr, &QAction::triggered, this, &QCR::runOcr);

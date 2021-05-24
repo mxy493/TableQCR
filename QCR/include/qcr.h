@@ -83,15 +83,16 @@ private:
     AboutDialog about_dlg;       // 关于对话框
     LoadingAnimation animation;  // 加载动画
 
-    QAction *act_open;    // 打开按钮
-    QAction *act_rotate;  // 旋转按钮
-    QAction *act_crop;    // 裁剪按钮
-    QAction *act_restore; // 恢复按钮
-    QAction *act_ocr;     // 识别按钮
-    QAction *act_optimize;// 识别按钮
-    QAction *act_export;  // 导出按钮
-    QAction *act_config;  // 设置按钮
-    QAction *act_about;   // 关于按钮
+    QAction *act_open;    // 打开
+    QAction *act_rotate;  // 旋转
+    QAction *act_contour;  // 轮廓
+    QAction *act_crop;    // 校正
+    QAction *act_restore; // 恢复
+    QAction *act_ocr;     // 识别
+    QAction *act_optimize;// 优化
+    QAction *act_export;  // 导出
+    QAction *act_config;  // 设置
+    QAction *act_about;   // 关于
 
     cv::Mat src_img;      // 缩放后的原图
     cv::Mat cropped_img;  // 后续处理都对该图进行处理
