@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>AboutDialog</class>
- <widget class="QDialog" name="about_dialog">
+ <widget class="QDialog" name="AboutDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -17,7 +17,7 @@
    <string>关于QCR</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="qcr.qrc">
+   <iconset resource="../qcr.qrc">
     <normaloff>:/images/logo.png</normaloff>:/images/logo.png</iconset>
   </property>
   <property name="whatsThis">
@@ -39,7 +39,7 @@
     <string/>
    </property>
    <property name="pixmap">
-    <pixmap resource="qcr.qrc">:/images/logo.png</pixmap>
+    <pixmap resource="../qcr.qrc">:/images/logo.png</pixmap>
    </property>
    <property name="scaledContents">
     <bool>true</bool>
@@ -68,7 +68,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>更新日期: 2021.03.10</string>
+    <string>更新日期: 2021.05.22</string>
    </property>
   </widget>
   <widget class="QPushButton" name="btn_ok">
@@ -87,6 +87,7 @@
  </widget>
  <resources>
   <include location="../qcr.qrc"/>
+  <include location="qcr.qrc"/>
  </resources>
  <connections/>
 </ui>

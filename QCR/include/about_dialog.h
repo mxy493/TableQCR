@@ -4,9 +4,6 @@
 #include <QDialog>
 #include "ui_about_dialog.h"
 
-namespace Ui {
-    class AboutDialog;
-}
 
 class AboutDialog : public QDialog
 {
@@ -17,7 +14,7 @@ public:
     ~AboutDialog();
 
 private:
-    Ui::AboutDialog *ui;
+    Ui::AboutDialog ui;
 };
 
 #endif // ABOUT_DIALOG_H
