@@ -606,12 +606,14 @@ void QCR::resizeImage(const QString &path, int len, int sz)
     {
         printLog(QString::fromUtf8(u8"图片无需压缩: %1 MB, %2x%3").arg(s_sz).arg(img.cols).arg(img.rows));
     }
+
+    src_img = img.clone(); // 后续不再对其进行任何操作
+    cropped_img = img.clone();
 }
 
 void QCR::edgeDetection()
 {
-    QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
-    cv::Mat img = cv::imread(path.toLocal8Bit().data());
+    cv::Mat img = cropped_img.clone();
 
     // 缩小图片到宽高不超过 len 像素以加快处理速度
     int len = 1000;
@@ -993,7 +995,7 @@ void QCR::getScoreColumn(std::vector<std::vector<int>>& rects)
 void QCR::cropScoreColumn(const std::vector<std::vector<int>> &rects)
 {
     QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
-    cv::Mat img = cv::imread(path.toLocal8Bit().data());
+    cv::Mat img = cropped_img.clone();
     QFileInfo info(path);
     QString base_name = info.baseName();
     QDir dir(info.absolutePath() + QString("/") + base_name);
@@ -1315,8 +1317,7 @@ void QCR::optimize()
     getScoreColumn(rects);
 
     // 预览获取到的范围
-    //QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
-    //cv::Mat img = cv::imread(path.toLocal8Bit().data());
+    //cv::Mat img = cropped_img.clone();
     //for (auto rect : rects)
     //{
     //    cv::rectangle(img, cv::Point(rect[1], rect[3]), cv::Point(rect[2], rect[4]), cv::Scalar(0, 255, 255));
@@ -1345,8 +1346,7 @@ void QCR::interceptImage()
         return;
     }
 
-    QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
-    cv::Mat img = cv::imread(path.toLocal8Bit().data());
+    cv::Mat img = cropped_img.clone();
     std::vector<std::vector<double>> points_rel;
     ui.ui_img_widget->getVertex(points_rel);
 
@@ -1377,12 +1377,11 @@ void QCR::interceptImage()
 
     // 透视变换
     cv::Mat M = cv::getPerspectiveTransform(pointsf, pts_std);
-    cv::Mat dst_img;
-    cv::warpPerspective(img, dst_img, M, cv::Size(width, height), cv::BORDER_REPLICATE);
+    cv::warpPerspective(img, cropped_img, M, cv::Size(width, height), cv::BORDER_REPLICATE);
 
     QFileInfo info(img_path);
     img_path_cropped = QString::fromUtf8(u8"./tmp/%1_cropped.%2").arg(info.baseName()).arg(info.suffix());
-    cv::imwrite(img_path_cropped.toLocal8Bit().data(), dst_img);
+    cv::imwrite(img_path_cropped.toLocal8Bit().data(), cropped_img);
     ui.ui_img_widget->setPix(QPixmap(img_path_cropped));
 
     this->act_restore->setEnabled(true);
