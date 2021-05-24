@@ -81,7 +81,6 @@ std::string get_data(const int64_t &timestamp)
     return utcDate;
 }
 
-void image2base64(const std::string &img_file, std::string &base64)
 {
     cv::Mat img = cv::imread(img_file);
     QFileInfo info(QString::fromLocal8Bit(img_file.c_str()));

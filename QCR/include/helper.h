@@ -37,10 +37,6 @@ void calAveSd(const std::vector<int> &vec, double &ave, double &sd);
 */
 std::string get_data(const int64_t &timestamp);
 
-/*
-* @brief 将本地图片转换为base64格式字符串
-*/
-void image2base64(const std::string &img_file, std::string &base64);
 
 /*
 * @brief 判断两个格子是否处于同一列

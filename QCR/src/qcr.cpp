@@ -203,8 +203,33 @@ void QCR::runOcr()
 
     QThread *ocr_thread = QThread::create(
         [&]() {
-            std::string base64_img;
-            image2base64(img_path.toLocal8Bit().data(), base64_img);
+            cv::Mat img = cropped_img.clone();
+            QFileInfo info(img_path);
+            std::string sfx = info.suffix().toLocal8Bit().data();
+            sfx.insert(sfx.begin(), '.');
+            std::vector<uchar> buf;
+            cv::imencode(sfx, img, buf);
+            auto base64 = reinterpret_cast<const unsigned char *>(buf.data());
+            std::string base64_img = base64_encode(base64, buf.size());
+            
+            // 写入到文件
+            QDir dir;
+            if (!dir.exists("./tmp"))
+            {
+                dir.mkdir("tmp");
+            }
+            // 打开保存文件对话框
+            QString file_path = QString::fromUtf8(u8"./tmp/%1_base64.txt").arg(info.baseName());
+            QFile file(file_path);
+            if (file.open(QIODevice::WriteOnly))
+            {
+                QTextStream out(&file);
+                out.setCodec("UTF-8");
+                out << base64_img.c_str();
+                out.flush();
+                file.close();
+                printLog(QString::fromUtf8(u8"原图片经base64编码后已写入到: ") + file_path);
+            }
 
             QString service_provider = config_dialog.ui.combo_service_provider->currentText();
             if (service_provider.contains(QString::fromUtf8(u8"腾讯")))
