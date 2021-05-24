@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include <QString>
+#include <QImage>
 
 #include <opencv2/imgproc/types_c.h>
 
@@ -37,6 +38,16 @@ void calAveSd(const std::vector<int> &vec, double &ave, double &sd);
 */
 std::string get_data(const int64_t &timestamp);
 
+QImage cvMatToQImage(const cv::Mat &mat);
+
+QPixmap cvMatToQPixmap(const cv::Mat &mat);
+
+cv::Mat QImageToCvMat(const QImage &inImage, bool inCloneImageData = true);
+
+// If inPixmap exists for the lifetime of the resulting cv::Mat, pass false to inCloneImageData to share inPixmap's data
+// with the cv::Mat directly
+//    NOTE: Format_RGB888 is an exception since we need to use a local QImage and thus must clone the data regardless
+cv::Mat QPixmapToCvMat(const QPixmap &inPixmap, bool inCloneImageData = true);
 
 /*
 * @brief 判断两个格子是否处于同一列
