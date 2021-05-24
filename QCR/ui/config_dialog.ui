@@ -176,7 +176,7 @@
         <item row="2" column="0">
          <widget class="QLabel" name="label_9">
           <property name="text">
-           <string>打开图片时识别表格轮廓</string>
+           <string>打开图片时识别轮廓</string>
           </property>
          </widget>
         </item>

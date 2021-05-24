@@ -81,7 +81,7 @@ private:
 
     QAction *act_open;    // 打开
     QAction *act_rotate;  // 旋转
-    QAction *act_contour;  // 轮廓
+    QAction *act_contour; // 轮廓
     QAction *act_crop;    // 校正
     QAction *act_restore; // 恢复
     QAction *act_ocr;     // 识别
