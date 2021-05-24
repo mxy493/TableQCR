@@ -170,7 +170,6 @@ void QCR::openImage()
         // 复制并压缩图片
         QFile file(path);
         img_path = QString::fromUtf8(u8"./tmp/qcr_%1.jpg").arg(getCurTimeString());
-        img_path_cropped.clear();
         file.copy(img_path);
         printLog(QString::fromUtf8(u8"已创建副本: ") + img_path);
         int len = config_dialog.ui.spin_img_length->value();
@@ -189,26 +188,23 @@ void QCR::rotateImage()
 {
     ui.ui_img_widget->rotateImage();
     QPixmap pix = ui.ui_img_widget->getPix();
-
-    QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
-    pix.save(path);
+    pix.save(img_path);
 }
 
 void QCR::runOcr()
 {
-    QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
-    if (path.isEmpty())
+    if (img_path.isEmpty())
     {
         MyMessageBox msg(QString::fromUtf8(u8"请先打开一张图片!"));
         msg.exec();
         return;
     }
-    printLog(QString::fromUtf8(u8"开始识别图片: ") + path);
+    printLog(QString::fromUtf8(u8"开始识别图片: ") + img_path);
 
     QThread *ocr_thread = QThread::create(
         [&]() {
             std::string base64_img;
-            image2base64(path.toLocal8Bit().data(), base64_img);
+            image2base64(img_path.toLocal8Bit().data(), base64_img);
 
             QString service_provider = config_dialog.ui.combo_service_provider->currentText();
             if (service_provider.contains(QString::fromUtf8(u8"腾讯")))
@@ -994,9 +990,8 @@ void QCR::getScoreColumn(std::vector<std::vector<int>>& rects)
 
 void QCR::cropScoreColumn(const std::vector<std::vector<int>> &rects)
 {
-    QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
     cv::Mat img = cropped_img.clone();
-    QFileInfo info(path);
+    QFileInfo info(img_path);
     QString base_name = info.baseName();
     QDir dir(info.absolutePath() + QString("/") + base_name);
     printLog(dir.absolutePath());
@@ -1024,8 +1019,7 @@ void QCR::cropScoreColumn(const std::vector<std::vector<int>> &rects)
 
 void QCR::extractWords(std::vector<std::vector<std::vector<int>>> &words)
 {
-    QString path = img_path_cropped.isEmpty() ? img_path : img_path_cropped;
-    QFileInfo info(path);
+    QFileInfo info(img_path);
     QDir dir(info.absolutePath() + QString("/") + info.baseName());
     if (!dir.exists())
         return;
@@ -1380,43 +1374,35 @@ void QCR::interceptImage()
     cv::warpPerspective(img, cropped_img, M, cv::Size(width, height), cv::BORDER_REPLICATE);
 
     QFileInfo info(img_path);
-    img_path_cropped = QString::fromUtf8(u8"./tmp/%1_cropped.%2").arg(info.baseName()).arg(info.suffix());
-    cv::imwrite(img_path_cropped.toLocal8Bit().data(), cropped_img);
-    ui.ui_img_widget->setPix(QPixmap(img_path_cropped));
+    cv::imwrite(img_path.toLocal8Bit().data(), cropped_img);
+    ui.ui_img_widget->setPix(QPixmap(img_path));
 
     this->act_restore->setEnabled(true);
 }
 
 void QCR::restore()
 {
-    if (!img_path_cropped.isEmpty())
+    // 删除同名临时文件夹
+    QFileInfo info(img_path);
+    QDir dir(info.absolutePath() + QString("/") + info.baseName());
+    if (dir.exists())
     {
-        // 删除同名临时文件夹
-        QFileInfo info(img_path_cropped);
-        QDir dir(info.absolutePath() + QString("/") + info.baseName());
-        if (dir.exists())
-        {
-            printLog(QString::fromUtf8(u8"删除文件夹: %1").arg(dir.absolutePath()));
-            dir.removeRecursively();
-        }
-        // 删除base64编码后的文件
-        QString path_base64 = QString::fromUtf8(u8"./tmp/%1_base64.txt").arg(info.baseName());
-        QFile file_base64(path_base64);
-        if (file_base64.exists())
-        {
-            printLog(QString::fromUtf8(u8"删除文件: %1").arg(path_base64));
-            file_base64.remove();
-        }
-        // 删除裁剪后的图片并显示原图片
-        QFile file(img_path_cropped);
-        if (file.exists())
-        {
-            printLog(QString::fromUtf8(u8"删除文件: %1").arg(img_path_cropped));
-            file.remove();
-            img_path_cropped.clear();
-            ui.ui_img_widget->setPix(QPixmap(img_path));
-        }
+        printLog(QString::fromUtf8(u8"删除文件夹: %1").arg(dir.absolutePath()));
+        dir.removeRecursively();
     }
+    // 删除base64编码后的文件
+    QString path_base64 = QString::fromUtf8(u8"./tmp/%1_base64.txt").arg(info.baseName());
+    QFile file_base64(path_base64);
+    if (file_base64.exists())
+    {
+        printLog(QString::fromUtf8(u8"删除文件: %1").arg(path_base64));
+        file_base64.remove();
+    }
+    // 恢复原始图片
+    cropped_img = src_img.clone();
+    cv::imwrite(img_path.toLocal8Bit().data(), cropped_img);
+    ui.ui_img_widget->setPix(QPixmap(img_path));
+
     this->act_restore->setEnabled(false);
     this->act_optimize->setEnabled(false);
     reset();
