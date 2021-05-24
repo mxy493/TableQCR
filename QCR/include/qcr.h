@@ -13,10 +13,6 @@ using json = nlohmann::json;
 #include "include/about_dialog.h"
 #include "include/loading_animation.h"
 
-// 图片最大大小, 过大的图片需要先压缩
-constexpr int IMG_LENGTH = 4096;
-constexpr int IMG_SIZE = 4 * 1024 * 1024;
-
 
 class QCR : public QMainWindow
 {
@@ -25,7 +21,7 @@ class QCR : public QMainWindow
 public:
     QCR(QWidget *parent = Q_NULLPTR);
     void getBdAccessToken();
-    void resizeImage(const QString &path, int len = IMG_LENGTH, int sz = IMG_SIZE);
+    void resizeImage(const QString &path, int len, int sz);
     /*
     * @brief 合并霍夫变换检测的线段并计算四个交点坐标
     * @param lines 检测到的线段
