@@ -19,8 +19,7 @@
 #include "include/digits_classify.h"
 
 
-QCR::QCR(QWidget *parent)
-    : QMainWindow(parent)
+QCR::QCR(QWidget *parent) : QMainWindow(parent)
 {
     ui.setupUi(this);
 
@@ -37,6 +36,7 @@ QCR::QCR(QWidget *parent)
     act_restore = new QAction(QIcon(":/images/act_undo.svg"), QString::fromUtf8(u8"恢复"));
     act_restore->setEnabled(false); // 默认不可用, 点击"校正"按钮后可用
     act_ocr = new QAction(QIcon(":/images/act_ocr.svg"), QString::fromUtf8(u8"识别"));
+    act_ocr->setEnabled(false);
     act_optimize = new QAction(QIcon(":/images/act_optimize.svg"), QString::fromUtf8(u8"优化"));
     act_optimize->setEnabled(false); // 识别后启用
     act_optimize->setToolTip(QString::fromUtf8(u8"请确保在图片已校正的前提下使用优化功能, 否则可能导致效果更差!"));
@@ -188,6 +188,7 @@ void QCR::openImage()
         act_rotate->setEnabled(true);
         act_contour->setEnabled(true);
         act_crop->setEnabled(true);
+        act_ocr->setEnabled(true);
 
         if (config_dialog.ui.check_auto_edge_detection->isChecked())
             edgeDetection();
