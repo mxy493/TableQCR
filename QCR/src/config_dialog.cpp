@@ -25,6 +25,7 @@ ConfigDialog::~ConfigDialog()
 void ConfigDialog::loadConfig()
 {
     QString path = QString::fromLocal8Bit(CONFIG_FILE.c_str());
+    printLog(QString::fromUtf8(u8"开始加载配置: %1").arg(path));
     QFile file(path);
     if (!file.exists())
     {
@@ -85,7 +86,7 @@ void ConfigDialog::loadConfig()
             }
         }
         file.close();
-        printLog(QString::fromUtf8(u8"配置已加载: ") + path);
+        printLog(QString::fromUtf8(u8"配置加载完毕"));
     }
 }
 

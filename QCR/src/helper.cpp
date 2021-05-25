@@ -21,8 +21,8 @@ void printLog(const QString &log, bool save)
 {
     // 不添加空格, 不添加引号, 但末尾自动添加换行
     QDateTime now = QDateTime::currentDateTime();
-    QString time = now.toString(QString("yyyy-MM-dd_hh-mm-ss-zzz"));
-    QString log_str = time + ": " + log;
+    QString time = now.toString(QString("[yyyy-MM-dd_hh-mm-ss-zzz] "));
+    QString log_str = time + log;
     qDebug().nospace().noquote() << log_str;
 
     if (save)
