@@ -82,6 +82,7 @@ QCR::QCR(QWidget *parent) : QMainWindow(parent)
             config_dialog.loadConfig();
             getBdAccessToken();
             loadModel("./data/mnist.json");
+            cleanLog();
         });
 
     if (!QDir("data").exists())
