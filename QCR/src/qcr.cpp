@@ -1319,7 +1319,7 @@ void QCR::fusion(std::vector<std::vector<std::vector<int>>> &words)
                     int has_num = text.contains(QRegularExpression(u8"[0-9]+"));
 
                     // 有两个数字, 认为原数据是准确的不需要替换
-                    if (has_num && !has_oth && text.size() == 2)
+                    if (has_num && !text.startsWith('0') && !has_oth && text.size() == 2)
                         ;
                     // 原数据为"100"不替换
                     else if (has_num && !has_oth && text.size() == 3 && text == QString::fromUtf8(u8"100"))
