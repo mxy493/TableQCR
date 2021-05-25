@@ -4,8 +4,10 @@
 #include <QImage>
 
 #include <opencv2/imgproc/types_c.h>
+#include <spdlog/spdlog.h>
 
 #include <string>
+
 
 
 /*
@@ -14,6 +16,11 @@
 * @return 返回QString类型的2021-03-11_11-49-35格式的当前时间
 */
 QString getCurTimeString();
+
+/*
+* @brief 初始化spdlog
+*/
+bool initSpdLogger();
 
 /*
 * @brief 打印日志

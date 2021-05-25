@@ -2,14 +2,21 @@
 #include <QtDebug>
 #include <QDir>
 #include <QFileInfo>
+#include <QPixmap>
 
 #include <opencv2/opencv.hpp>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/basic_file_sink.h>
 
 #include <algorithm> // for std::min
 
 #include <include/base64.h>
 #include <include/helper.h>
-#include "QPixmap"
+
+std::shared_ptr<spdlog::logger> qcr_file_logger;
+std::shared_ptr<spdlog::logger> qcr_console_logger;
+
 
 QString getCurTimeString()
 {
@@ -17,38 +24,49 @@ QString getCurTimeString()
     return now.toString(QString("yyyy-MM-dd_hh-mm-ss"));
 }
 
+bool initSpdLogger()
+{
+    try
+    {
+        spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%t] %v");
+        QString date = QDate::currentDate().toString("yyyy-MM-dd");
+        std::string log_file = "log/" + date.toLocal8Bit() + ".log";
+        qcr_file_logger = spdlog::basic_logger_mt("qcr_file_logger", log_file);
+        qcr_console_logger = spdlog::stdout_color_mt("qcr_console_logger");
+    }
+    catch (const spdlog::spdlog_ex &ex)
+    {
+        std::cout << "Log init failed: " << ex.what() << std::endl;
+        return false;
+    }
+    return true;
+}
+
 void printLog(const QString &log, bool save)
 {
-    // 不添加空格, 不添加引号, 但末尾自动添加换行
-    QDateTime now = QDateTime::currentDateTime();
-    QString time = now.toString(QString("[yyyy-MM-dd_hh-mm-ss-zzz] "));
-    QString log_str = time + log;
-    qDebug().nospace().noquote() << log_str;
-
+    qcr_console_logger->info(log.toLocal8Bit().toStdString());
     if (save)
     {
-        if (!QDir("log").exists())
-            QDir().mkdir("log");
-        QFile file(QString("./log/") + now.toString(QString("yyyy-MM-dd")) + QString(".log"));
-        if (file.open(QIODevice::Append))
-        {
-            QTextStream out(&file);
-            out.setCodec("UTF-8");
-            out << log_str << "\n";
-            out.flush();
-            file.close();
-        }
+        qcr_file_logger->info(log.toUtf8().toStdString());
     }
 }
 
 void printLog(const std::string &log, bool save)
 {
-    printLog(QString::fromUtf8(log.c_str()), save);
+    qcr_console_logger->info(log);
+    if (save)
+    {
+        qcr_file_logger->info(log);
+    }
 }
 
 void printLog(const char *log, bool save)
 {
-    printLog(QString(log), save);
+    qcr_console_logger->info(log);
+    if (save)
+    {
+        qcr_file_logger->info(log);
+    }
 }
 
 void cleanLog()
