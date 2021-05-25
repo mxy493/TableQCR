@@ -51,6 +51,29 @@ void printLog(const char *log, bool save)
     printLog(QString(log), save);
 }
 
+void cleanLog()
+{
+    printLog(QString::fromUtf8(u8"开始清理超过30天的日志文件"));
+    QDir dir("log");
+    if (!dir.exists())
+        return;
+    QFileInfoList ls = dir.entryInfoList(QStringList({ "*-*-*.log" }), QDir::Files);
+    for (auto &info : ls)
+    {
+        QStringList d = info.baseName().split('-');
+        int year = d[0].toInt();
+        int month = d[1].toInt();
+        int day = d[2].toInt();
+        int days = QDate(year, month, day).daysTo(QDate::currentDate());
+        if (days > 30)
+        {
+            printLog(QString::fromUtf8(u8"删除: ") + info.fileName());
+            QFile::remove(info.absoluteFilePath());
+        }
+    }
+    printLog(QString::fromUtf8(u8"日志清理完毕"));
+}
+
 void calAveSd(const std::vector<double> &vec, double &ave, double &sd)
 {
     if (vec.empty())

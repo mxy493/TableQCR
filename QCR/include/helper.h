@@ -27,6 +27,11 @@ void printLog(const std::string &log, bool save = true);
 void printLog(const char *log, bool save = true);
 
 /*
+* @brief 清除30天以前的log文件
+*/
+void cleanLog();
+
+/*
 * @brief 计算平均值和标准差
 */
 void calAveSd(const std::vector<double> &vec, double &ave, double &sd);
