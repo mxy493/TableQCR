@@ -1081,8 +1081,7 @@ void QCR::extractWords(std::vector<std::vector<std::vector<int>>> &words)
     // Launch the pool with four threads.
     size_t num_threads = ls.size();
     boost::asio::thread_pool pool(num_threads);
-    printLog(QString::fromUtf8(u8"共%1个分数列图片, 创建%1个线程的线程池")
-        .arg(num_threads).arg(num_threads));
+    printLog(QString::fromUtf8(u8"共%1个分数列图片, 创建%1个线程的线程池").arg(num_threads));
 
     for (auto &info : ls)
     {
