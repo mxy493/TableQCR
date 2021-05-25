@@ -1,5 +1,6 @@
 ﻿#include <iostream>
 
+#include <QFile>
 #include <fdeep/fdeep.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
@@ -15,7 +16,15 @@ const int height = 28;
 
 void loadModel(const std::string &file_name)
 {
-    model = std::make_unique<fdeep::model>(fdeep::load_model(file_name));
+    printLog(QString::fromUtf8(u8"加载数字识别模型: %1").arg(file_name.c_str()));
+    if (QFile(file_name.c_str()).exists())
+    {
+        model = std::make_unique<fdeep::model>(fdeep::load_model(file_name));
+    }
+    else
+    {
+        printLog(QString::fromUtf8(u8"模型文件不存在: %1").arg(file_name.c_str()));
+    }
 }
 
 void stdProcImg(cv::Mat &img)

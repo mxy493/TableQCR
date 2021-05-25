@@ -78,6 +78,7 @@ QCR::QCR(QWidget *parent) : QMainWindow(parent)
     // into a separate thread.
     initial_thread = QThread::create(
         [&]() {
+            printLog(QString::fromUtf8(u8"进入初始化线程"));
             config_dialog.loadConfig();
             getBdAccessToken();
             loadModel("./data/mnist.json");
@@ -96,6 +97,7 @@ QCR::QCR(QWidget *parent) : QMainWindow(parent)
 
 void QCR::getBdAccessToken()
 {
+    printLog(QString::fromUtf8(u8"百度Access Token"));
     QDateTime now = QDateTime::currentDateTime();
     QString token_path = QString::fromUtf8(u8"./data/bd_%1.token").arg(now.toString(QString("yyyyMMdd")));
     QFile file(token_path);
@@ -109,6 +111,7 @@ void QCR::getBdAccessToken()
     }
     else
     {
+        printLog(QString::fromUtf8(u8"本地token文件不存在, 尝试获取新的token"));
         // 删除data目录下所有token的文件
         QDir dir;
         if (!dir.exists("data"))
@@ -165,7 +168,7 @@ void QCR::openImage()
     QString path = QFileDialog::getOpenFileName(this, QString::fromUtf8(u8"打开图片"),
         QStandardPaths::writableLocation(QStandardPaths::DesktopLocation),
         QString::fromUtf8(u8"图片 (*.png *.bmp *.jpg *.tiff);;所有文件 (*.*)"));
-    printLog(QString::fromUtf8(u8"Original: ") + path);
+    printLog(QString::fromUtf8(u8"原路径: ") + path);
     if (!path.isEmpty())
     {
         // 创建 tmp 文件夹
@@ -204,16 +207,11 @@ void QCR::rotateImage()
 
 void QCR::runOcr()
 {
-    if (img_path.isEmpty())
-    {
-        MyMessageBox msg(QString::fromUtf8(u8"请先打开一张图片!"));
-        msg.exec();
-        return;
-    }
-    printLog(QString::fromUtf8(u8"开始识别图片: ") + img_path);
+    printLog(QString::fromUtf8(u8"开始OCR识别"));
 
     QThread *ocr_thread = QThread::create(
         [&]() {
+            printLog(QString::fromUtf8(u8"进入OCR识别线程"));
             cv::Mat img = cropped_img.clone();
             QFileInfo info(img_path);
             std::string sfx = info.suffix().toLocal8Bit().data();
@@ -285,6 +283,7 @@ void QCR::runTxOcr(const std::string &base64_img)
     if (tx_request_url.empty() || tx_secret_id.empty() || tx_secret_key.empty())
     {
         ocr_success = false;
+        printLog(QString::fromUtf8(u8"缺少参数, 腾讯表格识别配置缺失"));
         emit msg_signal(QString::fromUtf8(u8"缺少参数, 请在设置页面完善配置后使用!"));
         return;
     }
@@ -318,6 +317,7 @@ void QCR::runBdOcr(const std::string &base64_img)
     if (bd_request_url.empty() || bd_get_result_url.empty() || bd_access_token.empty())
     {
         ocr_success = false;
+        printLog(QString::fromUtf8(u8"缺少参数, 百度表格识别配置缺失"));
         emit msg_signal(QString::fromUtf8(u8"缺少参数, 请在设置页面完善配置后使用!"));
         return;
     }
@@ -330,6 +330,7 @@ void QCR::runBdOcr(const std::string &base64_img)
 
         json req = json::parse(request);
         std::string request_id = req.at("result").at(0).at("request_id");
+        printLog(QString::fromUtf8(u8"百度表格识别request_id: %1").arg(request_id.c_str()));
 
         std::string response;
         while (true)
@@ -484,7 +485,11 @@ void QCR::getVertexes(std::vector<cv::Vec4i> &lines, std::vector<cv::Point> &poi
         }
     }
     if (h_lines.size() < 2 || v_lines.size() < 2)
+    {
+        printLog(QString::fromUtf8(u8"检测到的横线(%1)或竖线(%2)数量不足, 无法构成有效边")
+            .arg(h_lines.size()).arg(v_lines.size()));
         return;
+    }
 
     // ---------- 合并横向线段 ---------- //
     // 按端点y坐标从小到大排序
@@ -499,7 +504,7 @@ void QCR::getVertexes(std::vector<cv::Vec4i> &lines, std::vector<cv::Point> &poi
     double d2;
     // 判断是否同一条直线的距离阈值
     double threshold = 10.0;
-    printLog(QString::fromUtf8(u8"Distance threshold: %1").arg(threshold));
+    printLog(QString::fromUtf8(u8"距离阈值: %1").arg(threshold));
     
     for (size_t i = 1; i < h_lines.size() -1; ++i)
     {
@@ -645,6 +650,7 @@ void QCR::resizeImage(const QString &path, int len, int sz)
 
 void QCR::edgeDetection()
 {
+    printLog(QString::fromUtf8(u8"开始轮廓识别"));
     cv::Mat img = cropped_img.clone();
 
     // 缩小图片到宽高不超过 len 像素以加快处理速度
@@ -655,6 +661,7 @@ void QCR::edgeDetection()
         double c = static_cast<double>(img.cols);
         double scale = len / r < len / c ? len / r : len / c;
         cv::resize(img, img, cv::Size(), scale, scale, cv::INTER_AREA);
+        printLog(QString::fromUtf8(u8"缩小图片至%1x%2以加快识别速度").arg(img.cols).arg(img.rows));
     }
 
     // 检查是否为灰度图，如果不是，转化为灰度图
@@ -702,13 +709,16 @@ void QCR::edgeDetection()
 
     std::vector<cv::Vec4i> lines;
     cv::HoughLinesP(black, lines, 1, CV_PI / 180, 50, 100, 50);
-    printLog(QString::fromUtf8(u8"Detected lines: %1").arg(lines.size()));
+    printLog(QString::fromUtf8(u8"检测到%1条线段").arg(lines.size()));
 
     // 四个顶点: 左上、右上、右下、左下
     std::vector<cv::Point> points;
     getVertexes(lines, points);
     if (points.size() != 4)
+    {
+        printLog(QString::fromUtf8(u8"轮廓识别失败"));
         return;
+    }
     
     //cv::Mat dst = img.clone();
     //for (size_t i = 0; i < lines.size(); i++)
@@ -723,7 +733,6 @@ void QCR::edgeDetection()
     {
         double _x = static_cast<double>(p.x) / img.cols;
         double _y = static_cast<double>(p.y) / img.rows;
-        printLog(QString::fromUtf8(u8"x_rel = %1, y = %2").arg(_x).arg(_y));
         points_rel.push_back({ _x, _y });
     }
 
@@ -776,6 +785,7 @@ void QCR::updateTable()
 
 void QCR::reset()
 {
+    printLog(QString::fromUtf8(u8"重置: 清理识别结果, 清除表格内容, 清除选区"));
     ocr_result.clear();
 
     ui.ui_table_widget->clearContents();
@@ -786,6 +796,7 @@ void QCR::reset()
 
 void QCR::txParseData(const std::string &str)
 {
+    printLog(QString::fromUtf8(u8"开始解析腾讯表格识别返回结果"));
     json result_data = json::parse(str);
     std::vector<json> tables = result_data.at("Response").at("TableDetections");
     if (tables.size() == 0)
@@ -833,10 +844,12 @@ void QCR::txParseData(const std::string &str)
         };
         ocr_result[srow] += {scol, _cell};
     }
+    printLog(QString::fromUtf8(u8"腾讯数据解析完成"));
 }
 
 void QCR::bdParseData(const std::string &str)
 {
+    printLog(QString::fromUtf8(u8"开始解析百度表格识别返回结果"));
     json result = json::parse(str);
     std::string result_data_str = result.at("result").at("result_data");
     json result_data = json::parse(result_data_str);
@@ -885,10 +898,12 @@ void QCR::bdParseData(const std::string &str)
         };
         ocr_result[srow] += {scol, _cell};
     }
+    printLog(QString::fromUtf8(u8"百度数据解析完成"));
 }
 
 void QCR::getScoreColumn(std::vector<std::vector<int>>& rects)
 {
+    printLog(QString::fromUtf8(u8"解析表格数据以获取分数列像素范围"));
     for (int j = 0; j < ui.ui_table_widget->columnCount(); ++j)
     {
         // 分数列的像素范围
@@ -1022,10 +1037,12 @@ void QCR::getScoreColumn(std::vector<std::vector<int>>& rects)
         }
         ++j;
     }
+    printLog(QString::fromUtf8(u8"分数列获取完成, 共获取到%1个分数列").arg(rects.size()));
 }
 
 void QCR::cropScoreColumn(const std::vector<std::vector<int>> &rects)
 {
+    printLog(QString::fromUtf8(u8"开始裁剪分数列"));
     cv::Mat img = cropped_img.clone();
     QFileInfo info(img_path);
     QString base_name = info.baseName();
@@ -1048,10 +1065,12 @@ void QCR::cropScoreColumn(const std::vector<std::vector<int>> &rects)
             + QString(u8"%1_%2_%3_%4_%5.jpg").arg(rect[0]).arg(rect[1]).arg(rect[2]).arg(rect[3]).arg(img.rows);
         cv::imwrite(file_path.toLocal8Bit().data(), cropped);
     }
+    printLog(QString::fromUtf8(u8"分数列裁剪完毕"));
 }
 
 void QCR::extractWords(std::vector<std::vector<std::vector<int>>> &words)
 {
+    printLog(QString::fromUtf8(u8"开始提取数字并识别"));
     QFileInfo info(img_path);
     QDir dir(info.absolutePath() + QString("/") + info.baseName());
     if (!dir.exists())
@@ -1061,7 +1080,8 @@ void QCR::extractWords(std::vector<std::vector<std::vector<int>>> &words)
     // Launch the pool with four threads.
     size_t num_threads = ls.size();
     boost::asio::thread_pool pool(num_threads);
-    printLog(QString::fromUtf8(u8"创建%1个线程的线程池").arg(num_threads));
+    printLog(QString::fromUtf8(u8"共%1个分数列图片, 创建%1个线程的线程池")
+        .arg(num_threads).arg(num_threads));
 
     for (auto &info : ls)
     {
@@ -1136,7 +1156,7 @@ void QCR::extractWords(std::vector<std::vector<std::vector<int>>> &words)
 
                 // 对应一张图片（一列）的结果
                 std::vector<std::vector<int>> words_col;
-                cv::Mat tmp = img.clone();
+                //cv::Mat tmp = img.clone();
                 for (auto &contour : contours)
                 {
                     cv::Rect rect = cv::boundingRect(contour);
@@ -1194,8 +1214,8 @@ void QCR::extractWords(std::vector<std::vector<std::vector<int>>> &words)
                     cv::warpPerspective(word, word, reverse, cv::Size(r - l, b - t));
 
                     // 拟合的矩形框
-                    for (int i = 0; i < 4; ++i)
-                        cv::line(tmp, points[i], points[(i + 1) % 4], cv::Scalar(0, 255, 255));
+                    //for (int i = 0; i < 4; ++i)
+                    //    cv::line(tmp, points[i], points[(i + 1) % 4], cv::Scalar(0, 255, 255));
 
                     // 识别提取出的数字
                     int number = predict(word);
@@ -1232,11 +1252,14 @@ void QCR::combine(std::vector<std::vector<int>> &words, std::vector<int> &word)
     int b = (*std::max_element(words.begin(), words.end(),
         [=](auto w1, auto w2) { return w1[4] < w2[4]; }))[4];
     word = { words[0][0], l, r, t, b, nums };
-    printLog(QString("Combine: %1\t%2\t%3\t%4\t%5\t").arg(word[0]).arg(word[1]).arg(word[2]).arg(word[3]).arg(word[4]));
+    printLog(QString(u8"拼接: %1, %2, %3, %4, %5, %6")
+        .arg(word[0]).arg(word[1]).arg(word[2])
+        .arg(word[3]).arg(word[4]).arg(word[5]));
 }
 
 void QCR::spliceWords(std::vector<std::vector<std::vector<int>>> &words)
 {
+    printLog(QString::fromUtf8(u8"开始拼接同一单元格的数字"));
     if (words.empty())
         return;
     for (int i = 0; i < words.size(); ++i)
@@ -1280,10 +1303,12 @@ void QCR::spliceWords(std::vector<std::vector<std::vector<int>>> &words)
 
         words[i] = words_col;
     }
+    printLog(QString::fromUtf8(u8"拼接完成"));
 }
 
 void QCR::fusion(std::vector<std::vector<std::vector<int>>> &words)
 {
+    printLog(QString::fromUtf8(u8"开始融合数据"));
     for (auto &words_col : words)
     {
         for (auto &w : words_col)
@@ -1335,10 +1360,12 @@ void QCR::fusion(std::vector<std::vector<std::vector<int>>> &words)
             }
         }
     }
+    printLog(QString::fromUtf8(u8"数据融合完成"));
 }
 
 void QCR::optimize()
 {
+    printLog(QString::fromUtf8(u8"开始优化数字识别结果"));
     std::vector<std::vector<int>> rects;
     // 获取
     getScoreColumn(rects);
@@ -1362,17 +1389,12 @@ void QCR::optimize()
     fusion(words);
     // 将数据更新到界面
     updateTable();
+    printLog(QString::fromUtf8(u8"优化完毕"));
 }
 
 void QCR::interceptImage()
 {
-    if (img_path.isEmpty())
-    {
-        MyMessageBox msg(QString::fromUtf8(u8"请先打开一张图片!"));
-        msg.exec();
-        return;
-    }
-
+    printLog(QString::fromUtf8(u8"开始校正图片"));
     cv::Mat img = cropped_img.clone();
     std::vector<std::vector<double>> points_rel;
     ui.ui_img_widget->getVertex(points_rel);
@@ -1411,6 +1433,7 @@ void QCR::interceptImage()
     ui.ui_img_widget->setPix(cvMatToQPixmap(cropped_img));
 
     this->act_restore->setEnabled(true);
+    printLog(QString::fromUtf8(u8"图片校正完成"));
 }
 
 void QCR::restore()
@@ -1443,10 +1466,12 @@ void QCR::restore()
 
 void QCR::closeEvent(QCloseEvent *event)
 {
+    printLog(QString::fromUtf8(u8"关闭程序"));
     // 清理 tmp 文件夹
     QDir dir("./tmp");
     if (dir.exists())
     {
+        printLog(QString::fromUtf8(u8"清理tmp文件夹"));
         if (!dir.removeRecursively())
         {
             MyMessageBox msg(QString::fromUtf8(u8"尝试清理 tmp 文件夹失败!"));
@@ -1458,6 +1483,7 @@ void QCR::closeEvent(QCloseEvent *event)
     // 等待初始化线程结束
     if (initial_thread->isRunning())
     {
+        printLog(QString::fromUtf8(u8"等待初始化线程结束后关闭"));
         initial_thread->quit();
         MyMessageBox msg(QString::fromUtf8(u8"程序将在初始化线程结束后关闭!"));
         msg.setWindowIcon(QIcon(":/images/logo.png"));
