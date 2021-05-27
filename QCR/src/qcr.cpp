@@ -1041,194 +1041,137 @@ void QCR::getScoreColumn(std::vector<std::vector<int>>& rects)
     printLog(QString::fromUtf8(u8"分数列获取完成, 共获取到%1个分数列").arg(rects.size()));
 }
 
-void QCR::cropScoreColumn(const std::vector<std::vector<int>> &rects)
+cv::Mat QCR::removeTableBorders()
 {
-    printLog(QString::fromUtf8(u8"开始裁剪分数列"));
-    cv::Mat img = cropped_img.clone();
-    QFileInfo info(img_path);
-    QString base_name = info.baseName();
-    QDir dir(info.absolutePath() + QString("/") + base_name);
-    if (dir.exists())
-    {
-        printLog(QString::fromUtf8(u8"删除已有文件夹: %1").arg(dir.absolutePath()));
-        dir.removeRecursively();
-    }
-    dir.setPath(info.absolutePath());
-    if (dir.mkdir(base_name))
-        printLog(QString::fromUtf8(u8"创建裁剪文件夹成功: /tmp/%1").arg(base_name));
+    printLog(QString::fromUtf8(u8"开始处理图片去除表格边框"));
+    // 检查是否为灰度图，如果不是，转化为灰度图
+    cv::Mat gray = cropped_img.clone();
+    if (gray.channels() == 3)
+        cv::cvtColor(gray, gray, CV_BGR2GRAY);
 
-    for (auto &rect : rects)
-    {
-        // 截取到图片的底部
-        cv::Rect rc(cv::Point(rect[1], rect[3]), cv::Point(rect[2], img.rows));
-        cv::Mat cropped = img(rc);
-        QString file_path = info.absolutePath() + QString("/") + base_name + QString("/")
-            + QString(u8"%1_%2_%3_%4_%5.jpg").arg(rect[0]).arg(rect[1]).arg(rect[2]).arg(rect[3]).arg(img.rows);
-        cv::imwrite(file_path.toLocal8Bit().data(), cropped);
-    }
-    printLog(QString::fromUtf8(u8"分数列裁剪完毕"));
+    // 双边滤波
+    cv::Mat blured;
+    cv::bilateralFilter(gray, blured, 5, 70, 70);
+
+    // 自适应均衡化，提高对比度，裁剪效果更好
+    cv::Mat proc;
+    cv::Ptr<cv::CLAHE> clahe = createCLAHE(1, cv::Size(10, 10));
+    clahe->apply(blured, proc);
+
+    // 阈值化，转化为黑白图片
+    cv::Mat img1;
+    adaptiveThreshold(proc, img1, 255,
+        CV_ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, 15, 10);
+
+    // 形态学, 保留较长的横竖线条
+    // 黑底白字, 腐蚀掉白字
+    cv::Mat struct_h = cv::getStructuringElement(
+        cv::MORPH_RECT, cv::Size(40, 1));
+    cv::Mat mat_h;
+    erode(img1, mat_h, struct_h, cv::Size(-1, -1), 2);
+    dilate(mat_h, mat_h, struct_h, cv::Size(-1, -1), 2);
+
+    cv::Mat struct_v = cv::getStructuringElement(
+        cv::MORPH_RECT, cv::Size(1, 40));
+    cv::Mat mat_v;
+    erode(img1, mat_v, struct_v, cv::Size(-1, -1), 2);
+    dilate(mat_v, mat_v, struct_v, cv::Size(-1, -1), 2);
+
+    cv::Mat mat_table;
+    bitwise_or(mat_h, mat_v, mat_table);
+    dilate(mat_table, mat_table, cv::Mat());
+
+    mat_table = 255 - mat_table;
+
+    // 灰度化后直接阈值化避免过多的处理丢失细节
+    cv::Mat img2;
+    adaptiveThreshold(gray, img2, 255,
+        CV_ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY_INV, 15, 10);
+
+    cv::Mat no_border;
+    bitwise_and(img2, mat_table, no_border);
+
+    printLog(QString::fromUtf8(u8"表格边框已去除"));
+
+    return no_border;
 }
 
-void QCR::extractWords(std::vector<std::vector<std::vector<int>>> &words)
+void QCR::extractWords(cv::Mat mat, std::vector<int> rect,
+    std::vector<std::vector<std::vector<int>>> &words)
 {
     printLog(QString::fromUtf8(u8"开始提取数字并识别"));
-    QFileInfo info(img_path);
-    QDir dir(info.absolutePath() + QString("/") + info.baseName());
-    if (!dir.exists())
-        return;
-    QFileInfoList ls = dir.entryInfoList(QStringList({ "*.jpg" }), QDir::Files);
+    std::vector<std::vector<cv::Point>> contours;
+    findContours(mat, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
-    // Launch the pool with four threads.
-    size_t num_threads = ls.size();
-    boost::asio::thread_pool pool(num_threads);
-    printLog(QString::fromUtf8(u8"共%1个分数列图片, 创建%1个线程的线程池").arg(num_threads));
-
-    for (auto &info : ls)
+    // 对应一张图片（一列）的结果
+    std::vector<std::vector<int>> words_col;
+    for (auto &contour : contours)
     {
-        // Submit a lambda object to the pool.
-        boost::asio::post(pool,
-            [&]()
-            {
-                std::string thread_id = boost::lexical_cast<std::string>(
-                    boost::this_thread::get_id());
-                printLog(QString::fromUtf8(u8"Thread: %1, 开始处理: %2")
-                    .arg(thread_id.c_str()).arg(info.fileName()));
+        cv::Rect rc = cv::boundingRect(contour);
+        // 如果超过宽度超过高度的3/2倍认为不是数字
+        if (rc.height < 12 || rc.height > 80 ||
+            rc.width < 6 || rc.width > 60 ||
+            2 * rc.width > 3 * rc.height)
+            continue;
 
-                QString _s = info.baseName();
-                auto str_list = _s.split("_");
-                int _col = str_list[0].toInt();
-                int _left = str_list[1].toInt();
-                int _right = str_list[2].toInt();
-                int _top = str_list[3].toInt();
-                int _bottom = str_list[4].toInt();
-
-                cv::Mat img = cv::imread(info.absoluteFilePath().toLocal8Bit().data());
-                // 检查是否为灰度图，如果不是，转化为灰度图
-                cv::Mat gray = img.clone();
-                if (img.channels() == 3)
-                    cv::cvtColor(img, gray, CV_BGR2GRAY);
-
-                // 双边滤波
-                cv::Mat blured;
-                cv::bilateralFilter(gray, blured, 5, 70, 70);
-
-                // 自适应均衡化，提高对比度，裁剪效果更好
-                cv::Mat proc;
-                cv::Ptr<cv::CLAHE> clahe = createCLAHE(1, cv::Size(10, 10));
-                clahe->apply(blured, proc);
-
-                // 阈值化，转化为黑白图片
-                cv::Mat img1;
-                adaptiveThreshold(proc, img1, 255,
-                    CV_ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, 15, 10);
-
-                // 形态学, 保留较长的横竖线条
-                // 黑底白字, 腐蚀掉白字
-                cv::Mat struct_h = cv::getStructuringElement(
-                    cv::MORPH_RECT, cv::Size(40, 1));
-                cv::Mat mat_h;
-                erode(img1, mat_h, struct_h, cv::Size(-1, -1), 2);
-                dilate(mat_h, mat_h, struct_h, cv::Size(-1, -1), 2);
-
-                cv::Mat struct_v = cv::getStructuringElement(
-                    cv::MORPH_RECT, cv::Size(1, 40));
-                cv::Mat mat_v;
-                erode(img1, mat_v, struct_v, cv::Size(-1, -1), 2);
-                dilate(mat_v, mat_v, struct_v, cv::Size(-1, -1), 2);
-
-                cv::Mat mat_table;
-                bitwise_or(mat_h, mat_v, mat_table);
-                dilate(mat_table, mat_table, cv::Mat());
-
-                mat_table = 255 - mat_table;
-
-                // 灰度化后直接阈值化避免过多的处理丢失细节
-                cv::Mat img2;
-                adaptiveThreshold(gray, img2, 255,
-                    CV_ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY_INV, 15, 10);
-
-                cv::Mat no_border;
-                bitwise_and(img2, mat_table, no_border);
-
-                // ---------- 提取文字框 ---------- //
-                std::vector<std::vector<cv::Point>> contours;
-                findContours(no_border, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-
-                // 对应一张图片（一列）的结果
-                std::vector<std::vector<int>> words_col;
-                //cv::Mat tmp = img.clone();
-                for (auto &contour : contours)
-                {
-                    cv::Rect rect = cv::boundingRect(contour);
-                    // 如果超过宽度超过高度的3/2倍认为不是数字
-                    if (rect.height < 12 || rect.height > 80 ||
-                        rect.width < 6 || rect.width > 60 ||
-                        2 * rect.width > 3 * rect.height)
-                        continue;
-
-                    cv::RotatedRect min_rect = cv::minAreaRect(contour);
+        cv::RotatedRect min_rect = cv::minAreaRect(contour);
             
-                    // 稍微扩大一点范围
-                    cv::Size2f sz = min_rect.size;
-                    sz.width += 4;
-                    sz.height += 4;
-                    cv::RotatedRect r_rect(min_rect.center, sz, min_rect.angle);
+        // 稍微扩大一点范围
+        cv::Size2f sz = min_rect.size;
+        sz.width += 4;
+        sz.height += 4;
+        cv::RotatedRect r_rect(min_rect.center, sz, min_rect.angle);
             
-                    // The points array for storing rectangle vertices. The order is bottomLeft, topLeft, topRight, bottomRight.
-                    cv::Point2f points[4];
-                    r_rect.points(points);
+        // The points array for storing rectangle vertices. The order is bottomLeft, topLeft, topRight, bottomRight.
+        cv::Point2f points[4];
+        r_rect.points(points);
 
-                    std::vector<double> xs;
-                    std::vector<double> ys;
-                    for (auto p : points)
-                    {
-                        xs.push_back(p.x);
-                        ys.push_back(p.y);
-                    }
-                    double l = *std::min_element(xs.begin(), xs.end());
-                    double r = *std::max_element(xs.begin(), xs.end());
-                    double t = *std::min_element(ys.begin(), ys.end());
-                    double b = *std::max_element(ys.begin(), ys.end());
+        std::vector<double> xs;
+        std::vector<double> ys;
+        for (auto p : points)
+        {
+            xs.push_back(p.x);
+            ys.push_back(p.y);
+        }
+        double l = *std::min_element(xs.begin(), xs.end());
+        double r = *std::max_element(xs.begin(), xs.end());
+        double t = *std::min_element(ys.begin(), ys.end());
+        double b = *std::max_element(ys.begin(), ys.end());
 
-                    // 变换后的顶点
-                    cv::Point2f pts_std[4];
-                    pts_std[0] = cv::Point2f(0., r_rect.size.height);
-                    pts_std[1] = cv::Point2f(0., 0.);
-                    pts_std[2] = cv::Point2f(r_rect.size.width, 0.);
-                    pts_std[3] = cv::Point2f(r_rect.size.width, r_rect.size.height);
+        // 变换后的顶点
+        cv::Point2f pts_std[4];
+        pts_std[0] = cv::Point2f(0., r_rect.size.height);
+        pts_std[1] = cv::Point2f(0., 0.);
+        pts_std[2] = cv::Point2f(r_rect.size.width, 0.);
+        pts_std[3] = cv::Point2f(r_rect.size.width, r_rect.size.height);
 
-                    // 转换回去
-                    cv::Point2f pts_rev[4];
-                    for (int i = 0; i < 4; ++i)
-                    {
-                        pts_rev[i].x = points[i].x - l;
-                        pts_rev[i].y = points[i].y - t;
-                    }
+        // 转换回去
+        cv::Point2f pts_rev[4];
+        for (int i = 0; i < 4; ++i)
+        {
+            pts_rev[i].x = points[i].x - l;
+            pts_rev[i].y = points[i].y - t;
+        }
 
-                    // 透视变换
-                    cv::Mat forward = cv::getPerspectiveTransform(points, pts_std);
-                    cv::Mat reverse = cv::getPerspectiveTransform(pts_std, pts_rev);
-                    cv::Mat word;
-                    cv::warpPerspective(no_border, word, forward,
-                        cv::Size(r_rect.size.width, r_rect.size.height));
-                    cv::warpPerspective(word, word, reverse, cv::Size(r - l, b - t));
+        // 透视变换
+        cv::Mat forward = cv::getPerspectiveTransform(points, pts_std);
+        cv::Mat reverse = cv::getPerspectiveTransform(pts_std, pts_rev);
+        cv::Mat word;
+        cv::warpPerspective(mat, word, forward,
+            cv::Size(r_rect.size.width, r_rect.size.height));
+        cv::warpPerspective(word, word, reverse, cv::Size(r - l, b - t));
 
-                    // 拟合的矩形框
-                    //for (int i = 0; i < 4; ++i)
-                    //    cv::line(tmp, points[i], points[(i + 1) % 4], cv::Scalar(0, 255, 255));
+        // 拟合的矩形框
+        //for (int i = 0; i < 4; ++i)
+        //    cv::line(tmp, points[i], points[(i + 1) % 4], cv::Scalar(0, 255, 255));
 
-                    // 识别提取出的数字
-                    int number = predict(word);
-                    words_col.push_back({ _col, _left + rect.x, _left + rect.x + rect.width,
-                        _top + rect.y, _top + rect.y + rect.height, number });
-                }
-                words.push_back(words_col);
-            });
+        // 识别提取出的数字
+        int number = predict(word);
+        words_col.push_back({ rect[0], rect[1] + rc.x, rect[1] + rc.x + rc.width,
+            rect[3] + rc.y, rect[3] + rc.y + rc.height, number });
     }
-
-    // Wait for all tasks in the pool to complete.
-    pool.join();
-    printLog(QString::fromUtf8(u8"所有线程结束, 提取并识别数字完成"));
+    words.push_back(words_col);
+    printLog(QString::fromUtf8(u8"提取数字并识别完成"));
 }
 
 void QCR::combine(std::vector<std::vector<int>> &words, std::vector<int> &word)
@@ -1367,8 +1310,14 @@ void QCR::optimize()
 {
     printLog(QString::fromUtf8(u8"开始优化数字识别结果"));
     std::vector<std::vector<int>> rects;
-    // 获取
-    getScoreColumn(rects);
+    cv::Mat no_border;
+
+    QThread *t1 = QThread::create([&]() { no_border = removeTableBorders(); });
+    t1->start();
+    QThread *t2 = QThread::create([&]() { getScoreColumn(rects); });
+    t2->start();
+    t1->wait();
+    t2->wait();
 
     // 预览获取到的范围
     //cv::Mat img = cropped_img.clone();
@@ -1377,11 +1326,24 @@ void QCR::optimize()
     //    cv::rectangle(img, cv::Point(rect[1], rect[3]), cv::Point(rect[2], rect[4]), cv::Scalar(0, 255, 255));
     //}
 
-    // 根据获取到的范围切割图片并存储到本地备用
-    cropScoreColumn(rects);
-    // 从切割的图片中提取字符并识别
     std::vector<std::vector<std::vector<int>>> words;
-    extractWords(words);
+    // Launch the pool with four threads.
+    size_t num_threads = rects.size();
+    boost::asio::thread_pool pool(num_threads);
+    printLog(QString::fromUtf8(u8"共%1个分数列, 创建%1个线程的线程池").arg(num_threads));
+    for (auto &rect : rects)
+    {
+        boost::asio::post(pool,
+            [&]()
+            {
+                cv::Rect rc(rect[1], rect[3], rect[2] - rect[1], rect[4] - rect[3]);
+                cv::Mat mat = no_border(rc);
+                // 从切割的图片中提取字符并识别
+                extractWords(mat, rect, words);
+            });
+    }
+    // Wait for all tasks in the pool to complete.
+    pool.join();
 
     // 拼接识别到的数字
     spliceWords(words);
@@ -1438,16 +1400,9 @@ void QCR::interceptImage()
 
 void QCR::restore()
 {
-    // 删除同名临时文件夹
-    QFileInfo info(img_path);
-    QDir dir(info.absolutePath() + QString("/") + info.baseName());
-    if (dir.exists())
-    {
-        printLog(QString::fromUtf8(u8"删除文件夹: %1").arg(dir.absolutePath()));
-        dir.removeRecursively();
-    }
     // 删除base64编码后的文件
-    QString path_base64 = QString::fromUtf8(u8"./tmp/%1_base64.txt").arg(info.baseName());
+    QString path_base64 = QString::fromUtf8(u8"./tmp/%1_base64.txt")
+        .arg(QFileInfo(img_path).baseName());
     QFile file_base64(path_base64);
     if (file_base64.exists())
     {

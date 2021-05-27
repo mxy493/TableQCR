@@ -39,10 +39,11 @@ public:
     void bdParseData(const std::string &str);
     // 根据某一列的文本内容判断其是否是分数列, 返回所有分数列的像素范围及其对应的列数[col, left, right, top, bottom]
     void getScoreColumn(std::vector<std::vector<int>> &rects);
-    // 按获取到的分数列像素范围切割图片并以"col_left_right_top_bottom.jpg"格式保存图片
-    void cropScoreColumn(const std::vector<std::vector<int>> &rects);
+    // 获取去除边框后的图像
+    cv::Mat removeTableBorders();
     // 获取提取到的每个字符的坐标及其识别结果, 相对于切割前的图片[col, left, right, top, bottom, num]
-    void extractWords(std::vector<std::vector<std::vector<int>>> &words);
+    void extractWords(cv::Mat mat, std::vector<int> rect,
+        std::vector<std::vector<std::vector<int>>> &words);
     /*
     * @brief 拼接识别出的同一行的多个数字
     */
