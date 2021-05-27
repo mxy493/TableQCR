@@ -45,18 +45,22 @@ bool initSpdLogger()
 void printLog(const QString &log, bool save)
 {
     qcr_console_logger->info(log.toLocal8Bit().toStdString());
+    qcr_console_logger->flush();
     if (save)
     {
         qcr_file_logger->info(log.toUtf8().toStdString());
+        qcr_file_logger->flush();
     }
 }
 
 void printLog(const std::string &log, bool save)
 {
     qcr_console_logger->info(log);
+    qcr_console_logger->flush();
     if (save)
     {
         qcr_file_logger->info(log);
+        qcr_file_logger->flush();
     }
 }
 
@@ -241,7 +245,7 @@ cv::Mat QImageToCvMat(const QImage &inImage, bool inCloneImageData)
     }
 
     default:
-        printLog(QString("ASM::QImageToCvMat() - QImage format not handled in switch:").arg(inImage.format()));
+        printLog(QString("QImageToCvMat() - QImage format not handled in switch:").arg(inImage.format()));
         break;
     }
 
