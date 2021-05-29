@@ -676,7 +676,7 @@ void QCR::edgeDetection()
 
     // 自动计算阈值
     cv::Mat _tmp;
-    double otsu_thresh_val = cv::threshold(
+    double otsu_thresh_val = 0.8 * cv::threshold(
         blured, _tmp, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
     printLog("Otsu thresh value: " + std::to_string(otsu_thresh_val));
 
