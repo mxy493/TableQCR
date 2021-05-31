@@ -172,19 +172,9 @@ void QCR::openImage()
     printLog(QString::fromUtf8(u8"原路径: ") + path);
     if (!path.isEmpty())
     {
-        // 创建 tmp 文件夹
-        QDir dir;
-        if (!dir.exists("./tmp"))
-            dir.mkdir("tmp");
-
-        // 复制并压缩图片
-        QFile file(path);
-        img_path = QString::fromUtf8(u8"./tmp/qcr_%1.jpg").arg(getCurTimeString());
-        file.copy(img_path);
-        printLog(QString::fromUtf8(u8"已创建副本: ") + img_path);
         int len = config_dialog.ui.spin_img_length->value();
         int sz = config_dialog.ui.spin_img_size->value();
-        resizeImage(img_path, len, sz);
+        resizeImage(path, len, sz);
 
         reset();
         ui.ui_img_widget->setPix(cvMatToQPixmap(cropped_img));
@@ -203,7 +193,7 @@ void QCR::rotateImage()
 {
     ui.ui_img_widget->rotateImage();
     QPixmap pix = ui.ui_img_widget->getPix();
-    pix.save(img_path);
+    cropped_img = QPixmapToCvMat(pix);
 }
 
 void QCR::runOcr()
@@ -214,33 +204,11 @@ void QCR::runOcr()
         [&]() {
             printLog(QString::fromUtf8(u8"进入OCR识别线程"));
             cv::Mat img = cropped_img.clone();
-            QFileInfo info(img_path);
-            std::string sfx = info.suffix().toLocal8Bit().data();
-            sfx.insert(sfx.begin(), '.');
             std::vector<uchar> buf;
-            cv::imencode(sfx, img, buf);
+            cv::imencode(".jpg", img, buf);
             auto base64 = reinterpret_cast<const unsigned char *>(buf.data());
             std::string base64_img = base64_encode(base64, buf.size());
             
-            // 写入到文件
-            QDir dir;
-            if (!dir.exists("./tmp"))
-            {
-                dir.mkdir("tmp");
-            }
-            // 打开保存文件对话框
-            QString file_path = QString::fromUtf8(u8"./tmp/%1_base64.txt").arg(info.baseName());
-            QFile file(file_path);
-            if (file.open(QIODevice::WriteOnly))
-            {
-                QTextStream out(&file);
-                out.setCodec("UTF-8");
-                out << base64_img.c_str();
-                out.flush();
-                file.close();
-                printLog(QString::fromUtf8(u8"原图片经base64编码后已写入到: ") + file_path);
-            }
-
             QString service_provider = config_dialog.ui.combo_service_provider->currentText();
             if (service_provider.contains(QString::fromUtf8(u8"腾讯")))
             {
@@ -1390,8 +1358,6 @@ void QCR::interceptImage()
     cv::Mat M = cv::getPerspectiveTransform(pointsf, pts_std);
     cv::warpPerspective(img, cropped_img, M, cv::Size(width, height), cv::BORDER_REPLICATE);
 
-    QFileInfo info(img_path);
-    cv::imwrite(img_path.toLocal8Bit().data(), cropped_img);
     ui.ui_img_widget->setPix(cvMatToQPixmap(cropped_img));
 
     this->act_restore->setEnabled(true);
@@ -1400,19 +1366,9 @@ void QCR::interceptImage()
 
 void QCR::restore()
 {
-    // 删除base64编码后的文件
-    QString path_base64 = QString::fromUtf8(u8"./tmp/%1_base64.txt")
-        .arg(QFileInfo(img_path).baseName());
-    QFile file_base64(path_base64);
-    if (file_base64.exists())
-    {
-        printLog(QString::fromUtf8(u8"删除文件: %1").arg(path_base64));
-        file_base64.remove();
-    }
     // 恢复原始图片
     cropped_img = src_img.clone();
     ui.ui_img_widget->setPix(cvMatToQPixmap(cropped_img));
-    cv::imwrite(img_path.toLocal8Bit().data(), cropped_img);
 
     this->act_restore->setEnabled(false);
     this->act_optimize->setEnabled(false);
@@ -1422,19 +1378,6 @@ void QCR::restore()
 void QCR::closeEvent(QCloseEvent *event)
 {
     printLog(QString::fromUtf8(u8"关闭程序"));
-    // 清理 tmp 文件夹
-    QDir dir("./tmp");
-    if (dir.exists())
-    {
-        printLog(QString::fromUtf8(u8"清理tmp文件夹"));
-        if (!dir.removeRecursively())
-        {
-            MyMessageBox msg(QString::fromUtf8(u8"尝试清理 tmp 文件夹失败!"));
-            msg.exec();
-            event->accept();
-        }
-    }
-
     // 等待初始化线程结束
     if (initial_thread->isRunning())
     {
