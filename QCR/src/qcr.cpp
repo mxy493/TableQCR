@@ -661,34 +661,56 @@ void QCR::edgeDetection()
     findContours(canny, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
     double area = 0;
     int index = 0;
+    std::vector<std::vector<cv::Point>> hull(1);
     for (int i=0; i < contours.size(); ++i)
     {
         double a = cv::contourArea(contours[i]);
         if (a > area)
         {
-            // 折线化
-            double len = cv::arcLength(contours[i], true);
-            approxPolyDP(contours[i], contours[i], 0.05 * len, true);
+            cv::convexHull(contours[i], hull[0]); // 凸包点, 顺时针方向
+            double len = cv::arcLength(hull[0], true);
+            approxPolyDP(hull[0], hull[0], 0.05 * len, true); // 折线化
             area = a;
             index = i;
         }
     }
-
-    // 创建纯黑灰度图
-    cv::Mat black = cv::Mat::zeros(gray.size(), CV_8U);
-    cv::drawContours(black, contours, index, cv::Scalar(255), 1);
-
-    std::vector<cv::Vec4i> lines;
-    cv::HoughLinesP(black, lines, 1, CV_PI / 180, 50, 100, 50);
-    printLog(QString::fromUtf8(u8"检测到%1条线段").arg(lines.size()));
-
+    int count = hull[0].size();
+    printLog(QString::fromUtf8(u8"轮廓上点的数量: %1").arg(count));
     // 四个顶点: 左上、右上、右下、左下
     std::vector<cv::Point> points;
-    getVertexes(lines, points);
-    if (points.size() != 4)
+    if (count < 4)
     {
-        printLog(QString::fromUtf8(u8"轮廓识别失败"));
+        printLog(QString::fromUtf8(u8"外轮廓点的数量不足4, 无法构成四边形, 轮廓识别失败"));
         return;
+    }
+    else if (count == 4)
+    {
+        points = hull[0];
+        while (!(points[0].x < points[1].x && points[0].x < points[2].x
+            && points[0].y < points[2].y && points[0].y < points[3].y))
+        {
+            cv::Point tmp = points[0];
+            for (size_t i = 0; i < 3; ++i)
+                points[i] = points[i + 1];
+            points[3] = tmp;
+        }
+    }
+    else
+    {
+        // 创建纯黑灰度图
+        cv::Mat black = cv::Mat::zeros(gray.size(), CV_8UC1);
+        cv::drawContours(black, hull, -1, cv::Scalar(255), 1);
+
+        std::vector<cv::Vec4i> lines;
+        cv::HoughLinesP(black, lines, 1, CV_PI / 180, 50, 100, 50);
+        printLog(QString::fromUtf8(u8"检测到%1条线段").arg(lines.size()));
+
+        getVertexes(lines, points);
+        if (points.size() != 4)
+        {
+            printLog(QString::fromUtf8(u8"无法获取到有效顶点, 轮廓识别失败"));
+            return;
+        }
     }
     
     //cv::Mat dst = img.clone();
@@ -699,6 +721,7 @@ void QCR::edgeDetection()
     //        cv::Scalar(0, 0, 255), 1);
     //}
 
+    // 转相对坐标
     std::vector<std::vector<double>> points_rel;
     for (const auto &p : points)
     {
@@ -708,6 +731,7 @@ void QCR::edgeDetection()
     }
 
     ui.ui_img_widget->setInterceptBox(points_rel);
+    printLog(QString::fromUtf8(u8"轮廓识别结束"));
 }
 
 void QCR::updateTableCell(int row, int col, int row_span, int col_span, const QString &text)
