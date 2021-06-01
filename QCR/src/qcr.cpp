@@ -194,6 +194,7 @@ void QCR::rotateImage()
     ui.ui_img_widget->rotateImage();
     QPixmap pix = ui.ui_img_widget->getPix();
     cropped_img = QPixmapToCvMat(pix);
+    act_optimize->setEnabled(false);
 }
 
 void QCR::runOcr()
