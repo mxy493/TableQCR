@@ -667,7 +667,8 @@ void QCR::edgeDetection()
         if (a > area)
         {
             // 折线化
-            approxPolyDP(contours[i], contours[i], 10, true);
+            double len = cv::arcLength(contours[i], true);
+            approxPolyDP(contours[i], contours[i], 0.05 * len, true);
             area = a;
             index = i;
         }
@@ -675,7 +676,7 @@ void QCR::edgeDetection()
 
     // 创建纯黑灰度图
     cv::Mat black = cv::Mat::zeros(gray.size(), CV_8U);
-    cv::drawContours(black, contours, index, cv::Scalar(255, 255, 255), 1);
+    cv::drawContours(black, contours, index, cv::Scalar(255), 1);
 
     std::vector<cv::Vec4i> lines;
     cv::HoughLinesP(black, lines, 1, CV_PI / 180, 50, 100, 50);
