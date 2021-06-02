@@ -1117,7 +1117,8 @@ void QCR::extractWords(cv::Mat mat, std::vector<int> rect,
         sz.height += 4;
         cv::RotatedRect r_rect(min_rect.center, sz, min_rect.angle);
             
-        // The points array for storing rectangle vertices. The order is bottomLeft, topLeft, topRight, bottomRight.
+        // The points array for storing rectangle vertices.
+        // The order is: bottomLeft, topLeft, topRight, bottomRight.
         cv::Point2f points[4];
         r_rect.points(points);
 
@@ -1165,7 +1166,8 @@ void QCR::extractWords(cv::Mat mat, std::vector<int> rect,
         words_col.push_back({ rect[0], rect[1] + rc.x, rect[1] + rc.x + rc.width,
             rect[3] + rc.y, rect[3] + rc.y + rc.height, number });
     }
-    words.push_back(words_col);
+    if (!words_col.empty())
+        words.push_back(words_col);
     printLog(QString::fromUtf8(u8"提取数字并识别完成"));
 }
 
@@ -1289,7 +1291,7 @@ void QCR::fusion(std::vector<std::vector<std::vector<int>>> &words)
                     else if (has_num && !has_oth && text.size() == 3 && text == QString::fromUtf8(u8"100"))
                         ;
                     // 否则都替换为识别后的数字
-                    else
+                    else if (w[5] > 0 && w[5] <= 100)
                         ocr_result.at(srow).at(scol).at("text") = std::to_string(w[5]);
                     break;
                 }
