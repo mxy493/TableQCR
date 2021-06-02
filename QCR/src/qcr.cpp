@@ -1413,7 +1413,6 @@ void QCR::closeEvent(QCloseEvent *event)
         printLog(QString::fromUtf8(u8"等待初始化线程结束后关闭"));
         initial_thread->quit();
         MyMessageBox msg(QString::fromUtf8(u8"程序将在初始化线程结束后关闭!"));
-        msg.setWindowIcon(QIcon(":/images/logo.png"));
         connect(initial_thread, &QThread::finished, &msg, &QDialog::accept);
         msg.exec();
         initial_thread->wait();
