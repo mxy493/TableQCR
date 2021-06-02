@@ -83,9 +83,10 @@ QCR::QCR(QWidget *parent) : QMainWindow(parent)
             getBdAccessToken();
             loadModel("./data/mnist.json");
             cleanLog();
+            printLog(QString::fromUtf8(u8"初始化线程结束"));
         });
 
-    if (!QDir("data").exists())
+    if (!QFile("data/config.cfg").exists())
     {
         MyMessageBox msg(QString::fromUtf8(u8"初次使用, 请先在设置页面完善相关配置!"));
         msg.exec();
