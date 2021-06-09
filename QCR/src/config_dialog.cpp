@@ -1,6 +1,7 @@
 ﻿#include <QFile>
 #include <QDir>
 #include <QTextStream>
+#include <QCloseEvent>
 
 #include "include/helper.h"
 #include <include/config_dialog.h>
@@ -151,5 +152,11 @@ void ConfigDialog::updateConfig()
 void ConfigDialog::accept()
 {
     updateConfig();
-    this->close();
+    this->hide();
+}
+
+void ConfigDialog::reject()
+{
+    loadConfig();
+    this->hide();
 }
