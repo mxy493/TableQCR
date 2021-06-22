@@ -10,12 +10,9 @@
 *.userosscache
 *.sln.docstates
 
-/QCR/data/*
+/QCR/data/*.token
+/QCR/data/config.cfg
 /QCR/output
-/QCR/tmp
-/QCR/*.jpg
-/QCR/*.png
-/QCR/*.tiff
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
