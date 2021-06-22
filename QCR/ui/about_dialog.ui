@@ -55,7 +55,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>版本: v1.0.0</string>
+    <string>版本: v1.1.0</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_update">
@@ -68,7 +68,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>更新日期: 2021.05.22</string>
+    <string>更新日期: 2021.06.22</string>
    </property>
   </widget>
   <widget class="QPushButton" name="btn_ok">
