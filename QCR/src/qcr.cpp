@@ -793,6 +793,14 @@ void QCR::reset()
 void QCR::txParseData(const std::string &str)
 {
     printLog(QString::fromUtf8(u8"开始解析腾讯表格识别返回结果"));
+    if(!json::accept(str))
+    {
+        ocr_success = false;
+        QString text = QString::fromUtf8(u8"无法识别的返回数据:\n%1").arg(str.c_str());
+        printLog(text);
+        emit msg_signal(text);
+        return;
+    }
     json result_data = json::parse(str);
     std::vector<json> tables = result_data.at("Response").at("TableDetections");
     if (tables.size() == 0)
@@ -846,6 +854,14 @@ void QCR::txParseData(const std::string &str)
 void QCR::bdParseData(const std::string &str)
 {
     printLog(QString::fromUtf8(u8"开始解析百度表格识别返回结果"));
+    if (!json::accept(str))
+    {
+        ocr_success = false;
+        QString text = QString::fromUtf8(u8"无法识别的返回数据:\n%1").arg(str.c_str());
+        printLog(text);
+        emit msg_signal(text);
+        return;
+    }
     json result = json::parse(str);
     std::string result_data_str = result.at("result").at("result_data");
     json result_data = json::parse(result_data_str);
