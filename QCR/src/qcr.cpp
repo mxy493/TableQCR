@@ -1,4 +1,4 @@
-#include <QFileDialog>
+﻿#include <QFileDialog>
 #include <QTextStream>
 #include <QDateTime>
 #include <QIODevice>
@@ -167,12 +167,22 @@ void QCR::openImage()
 {
     this->act_optimize->setEnabled(false);
 
-    QString path = QFileDialog::getOpenFileName(this, QString::fromUtf8(u8"打开图片"),
-        QStandardPaths::writableLocation(QStandardPaths::DesktopLocation),
+    char val[256];
+    config_dialog.getConfig(CFG_SECTION_OTHERS.c_str(),
+        CFG_OTHERS_OPEN_IMG_PATH.c_str(), val);
+    QString path = QFileDialog::getOpenFileName(this,
+        QString::fromUtf8(u8"打开图片"), QString::fromUtf8(val),
         QString::fromUtf8(u8"图片 (*.png *.bmp *.jpg *.tiff);;所有文件 (*.*)"));
     printLog(QString::fromUtf8(u8"原路径: ") + path);
     if (!path.isEmpty())
     {
+        QFileInfo info = QFileInfo(path);
+        QString dir_path = info.absoluteDir().absolutePath();
+        config_dialog.setConfig(
+            CFG_SECTION_OTHERS.c_str(),
+            CFG_OTHERS_OPEN_IMG_PATH.c_str(),
+            dir_path.toUtf8().data());
+
         int len = config_dialog.ui.spin_img_length->value();
         int sz = config_dialog.ui.spin_img_size->value();
         resizeImage(path, len, sz);

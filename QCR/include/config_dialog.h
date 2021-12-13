@@ -1,4 +1,4 @@
-#ifndef CONFIG_DIALOG_H
+﻿#ifndef CONFIG_DIALOG_H
 #define CONFIG_DIALOG_H
 
 #include <QDialog>
@@ -27,6 +27,8 @@ const std::string CFG_BD_GET_RESULT_URL = "get_result_url";
 const std::string CFG_BD_API_KEY = "api_key";
 const std::string CFG_BD_SECRET_KEY = "secret_key";
 
+const std::string CFG_SECTION_OTHERS = "others";
+const std::string CFG_OTHERS_OPEN_IMG_PATH = "open_img_path";
 
 namespace Ui {
 class ConfigDialog;
@@ -45,6 +47,8 @@ public:
     void loadConfig();
     void saveConfig();
     void updateConfig();
+    void setConfig(const char * const section, const char * const key, const char * const value);
+    void getConfig(const char * const section, const char * const key, const char *value);
 
 public slots:
     void accept();

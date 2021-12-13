@@ -1,4 +1,4 @@
-#include <QFile>
+﻿#include <QFile>
 #include <QDir>
 #include <QTextStream>
 #include <QCloseEvent>
@@ -169,16 +169,24 @@ void ConfigDialog::updateConfig()
     saveConfig();
 }
 
-        out << "[tx]\n";
-        out << "tx_url=" << tx_url << "\n";
-        out << "tx_secret_id=" << tx_secret_id << "\n";
-        out << "tx_secret_key=" << tx_secret_key << "\n";
-
-        out.flush();
-        file.close();
-        printLog(QString::fromUtf8(u8"配置文件已更新: ") + path);
+void ConfigDialog::setConfig(const char * const section, const char * const key, const char * const value)
+{
+    if (!config_table.contains(section))
+    {
+        toml::table tbl = toml::table{ {{key, value}} };
+        config_table.insert_or_assign(section, tbl);
+    }
+    else
+    {
+        config_table[section].as_table()->insert_or_assign(key, value);
     }
 
+    saveConfig();
+}
+
+void ConfigDialog::getConfig(const char * const section, const char * const key, const char *value)
+{
+    value = config_table[section][key].value_or("");
 }
 
 void ConfigDialog::accept()
