@@ -1,4 +1,4 @@
-﻿#include <QFileDialog>
+#include <QFileDialog>
 #include <QTextStream>
 #include <QDateTime>
 #include <QIODevice>
@@ -86,7 +86,7 @@ QCR::QCR(QWidget *parent) : QMainWindow(parent)
             printLog(QString::fromUtf8(u8"初始化线程结束"));
         });
 
-    if (!QFile("data/config.cfg").exists())
+    if (!QFile(CONFIG_FILE.c_str()).exists())
     {
         MyMessageBox msg(QString::fromUtf8(u8"初次使用, 请先在设置页面完善相关配置!"));
         msg.exec();

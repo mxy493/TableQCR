@@ -1,4 +1,4 @@
-﻿#include <QFile>
+#include <QFile>
 #include <QDir>
 #include <QTextStream>
 #include <QCloseEvent>
@@ -33,109 +33,141 @@ void ConfigDialog::loadConfig()
         printLog(QString::fromUtf8(u8"配置文件(%1)不存在!").arg(path));
         return;
     }
-    if (file.open(QIODevice::ReadOnly))
+    try
     {
-        QTextStream in(&file);
-        in.setCodec("UTF-8");
-        while (true)
-        {
-            QString line = in.readLine();
-            if (line.isEmpty())
-                break;
-            if (line.contains('='))
-            {
-                line.remove(' ');
-                QStringList ls = line.split('=');
-                // 第一个'='左侧为键, 右侧为值
-                QString key = ls[0];
-                QString value = ls[1];
-                for (int i = 2; i < ls.size(); ++i)
-                    value.append(QString::fromUtf8(u8"=") + ls[i]);
+        config_table = toml::parse_file(CONFIG_FILE);
+    }
+    catch (const toml::parse_error& err)
+    {
+        printLog(QString::fromUtf8(u8"解析配置文件失败: %1").arg(err.description().data()));
+        return;
+    }
+    // 更新界面值
+    toml::table *tbl;
+    int integer;
+    bool bl;
+    std::string str;
+    QString qstr;
+    if (config_table.contains(CFG_SECTION_NORMAL))
+    {
+        tbl = config_table.get(CFG_SECTION_NORMAL)->as_table();
 
-                // 更新界面值
-                if (key == QString::fromUtf8(u8"service_provider"))
-                {
-                    int index = ui.combo_service_provider->findText(value);
-                    ui.combo_service_provider->setCurrentIndex(index);
-                }
-                else if (key == QString::fromUtf8(u8"img_length"))
-                    ui.spin_img_length->setValue(value.toInt());
-                else if (key == QString::fromUtf8(u8"img_size"))
-                    ui.spin_img_size->setValue(value.toInt());
-                else if (key == QString::fromUtf8(u8"auto_edge_detection"))
-                    ui.check_auto_edge_detection->setChecked(value == QString::fromUtf8(u8"true"));
-                else if (key == QString::fromUtf8(u8"auto_optimize"))
-                    ui.check_auto_optimize->setChecked(value == QString::fromUtf8(u8"true"));
+        str = (*tbl)[CFG_NORMAL_SERVICE_PROVIDER].value_or("");
+        qstr = QString::fromUtf8(str.c_str());
+        int index = ui.combo_service_provider->findText(qstr);
+        ui.combo_service_provider->setCurrentIndex(index);
 
-                else if (key == QString::fromUtf8(u8"tx_url"))
-                    ui.line_tx_url->setText(value);
-                else if (key == QString::fromUtf8(u8"tx_secret_id"))
-                    ui.line_tx_secret_id->setText(value);
-                else if (key == QString::fromUtf8(u8"tx_secret_key"))
-                    ui.line_tx_secret_key->setText(value);
+        integer = (*tbl)[CFG_NORMAL_IMG_LENGTH].value_or(4000);
+        ui.spin_img_length->setValue(integer);
 
-                else if (key == QString::fromUtf8(u8"bd_get_token_url"))
-                    ui.line_bd_get_token_url->setText(value);
-                else if (key == QString::fromUtf8(u8"bd_request_url"))
-                    ui.line_bd_request_url->setText(value);
-                else if (key == QString::fromUtf8(u8"bd_get_result_url"))
-                    ui.line_bd_get_result_url->setText(value);
-                else if (key == QString::fromUtf8(u8"bd_api_key"))
-                    ui.line_bd_api_key->setText(value);
-                else if (key == QString::fromUtf8(u8"bd_secret_key"))
-                    ui.line_bd_secret_key->setText(value);
-            }
-        }
-        file.close();
-        printLog(QString::fromUtf8(u8"配置加载完毕"));
+        integer = (*tbl)[CFG_NORMAL_IMG_SIZE].value_or(4);
+        ui.spin_img_size->setValue(integer);
+
+        bl = (*tbl)[CFG_NORMAL_AUTO_EDGE_DETECTION].value_or(true);
+        ui.check_auto_edge_detection->setChecked(bl);
+
+        bl = (*tbl)[CFG_NORMAL_AUTO_OPTIMIZE].value_or(false);    
+        ui.check_auto_optimize->setChecked(bl);
+    }
+    if (config_table.contains(CFG_SECTION_TX))
+    {
+        tbl = config_table.get(CFG_SECTION_TX)->as_table();
+
+        str =  (*tbl)[CFG_TX_URL].value_or("");
+        qstr = QString::fromUtf8(str.c_str());
+        ui.line_tx_url->setText(qstr);
+
+        str = (*tbl)[CFG_TX_SECRET_ID].value_or("");
+        qstr = QString::fromUtf8(str.c_str());
+        ui.line_tx_secret_id->setText(qstr);
+        
+        str = (*tbl)[CFG_TX_SECRET_KEY].value_or("");
+        qstr = QString::fromUtf8(str.c_str());
+        ui.line_tx_secret_key->setText(qstr);
+    }
+    if (config_table.contains(CFG_SECTION_BD))
+    {
+        tbl = config_table.get(CFG_SECTION_BD)->as_table();
+
+        str = (*tbl)[CFG_BD_GET_TOKEN_URL].value_or("");
+        qstr = QString::fromUtf8(str.c_str());
+        ui.line_bd_get_token_url->setText(qstr);
+        
+        str = (*tbl)[CFG_BD_REQUEST_URL].value_or("");
+        qstr = QString::fromUtf8(str.c_str());
+        ui.line_bd_request_url->setText(qstr);
+        
+        str = (*tbl)[CFG_BD_GET_RESULT_URL].value_or("");
+        qstr = QString::fromUtf8(str.c_str());
+        ui.line_bd_get_result_url->setText(qstr);
+        
+        str = (*tbl)[CFG_BD_API_KEY].value_or("");
+        qstr = QString::fromUtf8(str.c_str());
+        ui.line_bd_api_key->setText(qstr);
+        
+        str = (*tbl)[CFG_BD_SECRET_KEY].value_or("");
+        qstr = QString::fromUtf8(str.c_str());
+        ui.line_bd_secret_key->setText(qstr);
     }
 }
 
-void ConfigDialog::updateConfig()
+void ConfigDialog::saveConfig()
 {
-    QString service_provider = ui.combo_service_provider->currentText();
-    QString img_length = QString::number(ui.spin_img_length->value());
-    QString img_size = QString::number(ui.spin_img_size->value());
-    QString auto_edge_detection = ui.check_auto_edge_detection->isChecked() ? "true" : "false";
-    QString auto_optimize = ui.check_auto_optimize->isChecked() ? "true" : "false";
-
-    QString bd_get_token_url = ui.line_bd_get_token_url->text();
-    QString bd_request_url = ui.line_bd_request_url->text();
-    QString bd_get_result_url = ui.line_bd_get_result_url->text();
-    QString bd_api_key = ui.line_bd_api_key->text();
-    QString bd_secret_key = ui.line_bd_secret_key->text();
-
-    QString tx_url = ui.line_tx_url->text();
-    QString tx_secret_id = ui.line_tx_secret_id->text();
-    QString tx_secret_key = ui.line_tx_secret_key->text();
-
-    // 写入配置文件
     QDir dir;
     if (!dir.exists("./data"))
     {
         dir.mkdir("data");
     }
-    // 打开保存文件对话框
-    QString path = QString::fromLocal8Bit(CONFIG_FILE.c_str());
-    QFile file(path);
-    if (file.open(QIODevice::WriteOnly))
-    {
-        QTextStream out(&file);
-        out.setCodec("UTF-8");
+    std::ofstream outfile;
+    outfile.open("./data/config.toml", std::ios::out);
+    outfile << config_table;
+    outfile.close();
+    printLog(QString::fromUtf8(u8"配置文件已更新"));
+}
 
-        out << "[normal]\n";
-        out << "service_provider=" << service_provider << "\n";
-        out << "img_length=" << img_length << "\n";
-        out << "img_size=" << img_size << "\n";
-        out << "auto_edge_detection=" << auto_edge_detection << "\n";
-        out << "auto_optimize=" << auto_optimize << "\n";
+void ConfigDialog::updateConfig()
+{
+    QString str;
+    int integer;
+    bool bl;
 
-        out << "[bd]\n";
-        out << "bd_get_token_url=" << bd_get_token_url << "\n";
-        out << "bd_request_url=" << bd_request_url << "\n";
-        out << "bd_get_result_url=" << bd_get_result_url << "\n";
-        out << "bd_api_key=" << bd_api_key << "\n";
-        out << "bd_secret_key=" << bd_secret_key << "\n";
+    toml::table normal_table;
+    str = ui.combo_service_provider->currentText();
+    normal_table.insert_or_assign(CFG_NORMAL_SERVICE_PROVIDER, str.toUtf8().data());
+    integer = ui.spin_img_length->value();
+    normal_table.insert_or_assign(CFG_NORMAL_IMG_LENGTH, integer);
+    integer = ui.spin_img_size->value();
+    normal_table.insert_or_assign(CFG_NORMAL_IMG_SIZE, integer);
+    bl = ui.check_auto_edge_detection->isChecked();
+    normal_table.insert_or_assign(CFG_NORMAL_AUTO_EDGE_DETECTION, bl);
+    bl = ui.check_auto_optimize->isChecked();
+    normal_table.insert_or_assign(CFG_NORMAL_AUTO_OPTIMIZE, bl);
+    config_table.insert_or_assign(CFG_SECTION_NORMAL, normal_table);
+
+    toml::table bd_table;
+    str = ui.line_bd_get_token_url->text();
+    bd_table.insert_or_assign(CFG_BD_GET_TOKEN_URL, str.toUtf8().data());
+    str = ui.line_bd_request_url->text();
+    bd_table.insert_or_assign(CFG_BD_REQUEST_URL, str.toUtf8().data());
+    str = ui.line_bd_get_result_url->text();
+    bd_table.insert_or_assign(CFG_BD_GET_RESULT_URL, str.toUtf8().data());
+    str = ui.line_bd_api_key->text();
+    bd_table.insert_or_assign(CFG_BD_API_KEY, str.toUtf8().data());
+    str = ui.line_bd_secret_key->text();
+    bd_table.insert_or_assign(CFG_BD_SECRET_KEY, str.toUtf8().data());
+    config_table.insert(CFG_SECTION_BD, bd_table);
+
+    toml::table tx_table;
+    str = ui.line_tx_url->text();
+    tx_table.insert_or_assign(CFG_TX_URL, str.toUtf8().data());
+    str = ui.line_tx_secret_id->text();
+    tx_table.insert_or_assign(CFG_TX_SECRET_ID, str.toUtf8().data());
+    str = ui.line_tx_secret_key->text();
+    tx_table.insert_or_assign(CFG_TX_SECRET_KEY, str.toUtf8().data());
+    config_table.insert(CFG_SECTION_TX, tx_table);
+
+    saveConfig();
+}
 
         out << "[tx]\n";
         out << "tx_url=" << tx_url << "\n";

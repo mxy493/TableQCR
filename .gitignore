@@ -10,8 +10,9 @@
 *.userosscache
 *.sln.docstates
 
-/QCR/data/*.token
-/QCR/data/config.cfg
+**/data/*.token
+**/data/config.cfg
+**/data/config.toml
 /QCR/output
 
 # User-specific files (MonoDevelop/Xamarin Studio)
