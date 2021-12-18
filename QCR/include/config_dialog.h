@@ -48,7 +48,7 @@ public:
     void saveConfig();
     void updateConfig();
     void setConfig(const char * const section, const char * const key, const char * const value);
-    void getConfig(const char * const section, const char * const key, const char *value);
+    void getConfig(const char * const section, const char * const key, char *value);
 
 public slots:
     void accept();

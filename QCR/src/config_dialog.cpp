@@ -184,9 +184,10 @@ void ConfigDialog::setConfig(const char * const section, const char * const key,
     saveConfig();
 }
 
-void ConfigDialog::getConfig(const char * const section, const char * const key, const char *value)
+void ConfigDialog::getConfig(const char * const section, const char * const key, char * value)
 {
-    value = config_table[section][key].value_or("");
+    std::string tmp = config_table[section][key].value_or("");
+    memcpy(value, tmp.c_str(), tmp.length());
 }
 
 void ConfigDialog::accept()
