@@ -20,7 +20,8 @@ int bdGetAccessToken(std::string &access_token, const std::string &access_token_
     curl = curl_easy_init();
     if (curl)
     {
-        std::string url = access_token_url + "&client_id=" + api_key + "&client_secret=" + secret_key;
+        std::string url = access_token_url + "?grant_type=client_credentials"
+            + "&client_id=" + api_key + "&client_secret=" + secret_key;
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L); // 60s超时
         curl_easy_setopt(curl, CURLOPT_URL, url.data());
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);

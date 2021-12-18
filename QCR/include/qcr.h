@@ -20,7 +20,7 @@ class QCR : public QMainWindow
 
 public:
     QCR(QWidget *parent = Q_NULLPTR);
-    void getBdAccessToken();
+    int getBdAccessToken();
     void resizeImage(const QString &path, int len, int sz);
     /*
     * @brief 合并霍夫变换检测的线段并计算四个交点坐标

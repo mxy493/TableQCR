@@ -97,7 +97,7 @@ QCR::QCR(QWidget *parent) : QMainWindow(parent)
     }
 }
 
-void QCR::getBdAccessToken()
+int QCR::getBdAccessToken()
 {
     printLog(QString::fromUtf8(u8"百度Access Token"));
     QDateTime now = QDateTime::currentDateTime();
@@ -137,30 +137,51 @@ void QCR::getBdAccessToken()
         if (bd_get_token_url.empty() || bd_api_key.empty() || bd_secret_key.empty())
         {
             printLog(QString::fromUtf8(u8"参数不足, 无法获取百度Access Token"));
-            return;
+            return -1;
         }
 
         std::string response;
         int ret = bdGetAccessToken(response, bd_get_token_url, bd_api_key, bd_secret_key);
         if (ret == 0)
         {
-            bd_access_token = json::parse(response).at("access_token");
-
-            if (file.open(QIODevice::WriteOnly))
+            json response_json;
+            bool success = true;
+            if (json::accept(response))
             {
-                QTextStream out(&file);
-                out << bd_access_token.c_str();
-                out.flush();
-                file.close();
+                response_json = json::parse(response);
+                if (response_json.contains("access_token"))
+                    bd_access_token = response_json.at("access_token");
+                else
+                    success = false;
+
             }
-            printLog(QString::fromUtf8(u8"已获取到 Access Token 并写入到: ") + token_path);
+            if (success)
+            {
+                if (file.open(QIODevice::WriteOnly))
+                {
+                    QTextStream out(&file);
+                    out << bd_access_token.c_str();
+                    out.flush();
+                    file.close();
+                }
+                printLog(QString::fromUtf8(u8"已获取到 Access Token 并写入到: ") + token_path);
+            }
+            else
+            {
+                ocr_success = false;
+                QString text = QString::fromUtf8(u8"尝试获取百度Access Token失败:\n%1").arg(response.c_str());
+                printLog(text);
+                emit msg_signal(text);
+                return -1;
+            }
         }
         else
         {
             printLog(QString::fromUtf8(u8"获取百度token失败!"));
-            return;
+            return -1;
         }
     }
+    return 0;
 }
 
 void QCR::openImage()
@@ -294,7 +315,11 @@ void QCR::runBdOcr(const std::string &base64_img)
     std::string bd_get_result_url = tmp.toStdString();
 
     if (bd_access_token.empty())
-        getBdAccessToken();
+    {
+        int ret = getBdAccessToken();
+        if (ret != 0)
+            return;
+    }
     if (bd_request_url.empty() || bd_get_result_url.empty() || bd_access_token.empty())
     {
         ocr_success = false;
