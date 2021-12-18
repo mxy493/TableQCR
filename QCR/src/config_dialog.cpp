@@ -155,7 +155,7 @@ void ConfigDialog::updateConfig()
     bd_table.insert_or_assign(CFG_BD_API_KEY, str.toUtf8().data());
     str = ui.line_bd_secret_key->text();
     bd_table.insert_or_assign(CFG_BD_SECRET_KEY, str.toUtf8().data());
-    config_table.insert(CFG_SECTION_BD, bd_table);
+    config_table.insert_or_assign(CFG_SECTION_BD, bd_table);
 
     toml::table tx_table;
     str = ui.line_tx_url->text();
@@ -164,7 +164,7 @@ void ConfigDialog::updateConfig()
     tx_table.insert_or_assign(CFG_TX_SECRET_ID, str.toUtf8().data());
     str = ui.line_tx_secret_key->text();
     tx_table.insert_or_assign(CFG_TX_SECRET_KEY, str.toUtf8().data());
-    config_table.insert(CFG_SECTION_TX, tx_table);
+    config_table.insert_or_assign(CFG_SECTION_TX, tx_table);
 
     saveConfig();
 }
