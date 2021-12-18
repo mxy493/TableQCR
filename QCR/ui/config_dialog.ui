@@ -238,7 +238,11 @@
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QLineEdit" name="line_tx_url"/>
+         <widget class="QLineEdit" name="line_tx_url">
+          <property name="text">
+           <string>ocr.tencentcloudapi.com</string>
+          </property>
+         </widget>
         </item>
         <item row="2" column="0">
          <widget class="QLabel" name="label_8">
@@ -321,7 +325,11 @@
          <number>10</number>
         </property>
         <item row="2" column="1">
-         <widget class="QLineEdit" name="line_bd_request_url"/>
+         <widget class="QLineEdit" name="line_bd_request_url">
+          <property name="text">
+           <string>https://aip.baidubce.com/rest/2.0/solution/v1/form_ocr/request</string>
+          </property>
+         </widget>
         </item>
         <item row="3" column="0">
          <widget class="QLabel" name="label_2">
@@ -331,7 +339,11 @@
          </widget>
         </item>
         <item row="3" column="1">
-         <widget class="QLineEdit" name="line_bd_get_result_url"/>
+         <widget class="QLineEdit" name="line_bd_get_result_url">
+          <property name="text">
+           <string>https://aip.baidubce.com/rest/2.0/solution/v1/form_ocr/get_request_result</string>
+          </property>
+         </widget>
         </item>
         <item row="4" column="0">
          <widget class="QLabel" name="label_3">
@@ -368,7 +380,11 @@
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QLineEdit" name="line_bd_get_token_url"/>
+         <widget class="QLineEdit" name="line_bd_get_token_url">
+          <property name="text">
+           <string>https://aip.baidubce.com/oauth/2.0/token</string>
+          </property>
+         </widget>
         </item>
         <item row="0" column="0">
          <widget class="QLabel" name="label_12">
