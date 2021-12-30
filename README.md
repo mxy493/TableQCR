@@ -6,22 +6,28 @@
 
 **开发环境：**
 
-- Windows 10
-- Visual Studio 2019
+- Windows 11
+- Visual Studio 2022
 
 **依赖：**
 
-- [Qt 5.15.2](https://www.qt.io/)
-- [OpenCV](https://opencv.org/)
-- [curl](https://github.com/curl/curl)
-- [json](https://github.com/nlohmann/json)
-- [boost](https://www.boost.org/)
-- [frugally-deep](https://github.com/Dobiasd/frugally-deep)
-- [spdlog](https://github.com/gabime/spdlog)
+- [Qt 5.15.2](https://www.qt.io/)：程序界面及一些常用接口
+- [OpenCV](https://opencv.org/)：图像处理部分完全基于 OpenCV 实现
+- [curl](https://github.com/curl/curl)：用于HTTP请求
+- [json](https://github.com/nlohmann/json)：主要用于处理 OCR 服务商返回的数据
+- [boost](https://www.boost.org/)：线程池，用于多线程数字识别
+- [frugally-deep](https://github.com/Dobiasd/frugally-deep)：用于加载数字识别的 Keras 模型
+- [spdlog](https://github.com/gabime/spdlog)：日志框架
+- [openssl](https://github.com/openssl/openssl)：腾讯 OCR 服务加密相关
+
+推荐使用 [vcpkg](https://github.com/Microsoft/vcpkg) 安装相关库：
+
+```shell
+vcpkg install curl frugally-deep nlohmann-json openssl spdlog --triplet x64-windows
+```
 
 ## 演示
 
 ![optimize](optimize.gif)
 
 **注：测试图像中的姓名班级均为随机生成！**
-
