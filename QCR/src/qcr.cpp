@@ -188,11 +188,12 @@ void QCR::openImage()
 {
     this->act_optimize->setEnabled(false);
 
-    char val[256];
+    char val[256] = { '\0' };
     config_dialog.getConfig(CFG_SECTION_OTHERS.c_str(),
         CFG_OTHERS_OPEN_IMG_PATH.c_str(), val);
+    QString last_path = QString::fromUtf8(val);
     QString path = QFileDialog::getOpenFileName(this,
-        QString::fromUtf8(u8"打开图片"), QString::fromUtf8(val),
+        QString::fromUtf8(u8"打开图片"), last_path,
         QString::fromUtf8(u8"图片 (*.png *.bmp *.jpg *.tiff);;所有文件 (*.*)"));
     printLog(QString::fromUtf8(u8"原路径: ") + path);
     if (!path.isEmpty())
